@@ -1,0 +1,14 @@
+[package]
+name = "finaltree"
+version = "0.1.0"
+edition = "2021"
+description = "Provenance for gate results, fingerprinting the exact tree under test"
+license = "MIT"
+
+[lib]
+name = "finaltree"
+path = "src/lib.rs"
+
+[[bin]]
+name = "finaltree"
+path = "src/main.rs"

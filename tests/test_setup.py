@@ -31,7 +31,7 @@ def test_agents_md_stands_from_the_canonical_template():
         "Finaltree fingerprints the exact tree a gate ran on",
         "Fingerprints are computed from a local working tree with git only",
         "Fixtures are synthetic repos built in the tests",
-        "The local gate is python -m pytest once the suite exists",
+        "The local gate is python -m pytest and cargo test once the crate exists",
         "The closed round count stands in the README and moves only at a closure",
     ]
     positions = [annex.index(sentence) for sentence in sentences]
@@ -40,7 +40,7 @@ def test_agents_md_stands_from_the_canonical_template():
 
 def test_readme_records_the_closed_round_count():
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    assert "Closed rounds stand at 1 of 100" in readme
+    assert "Closed rounds stand at 2 of 100" in readme
 
 
 def test_readme_states_the_limits_of_the_fingerprint():
