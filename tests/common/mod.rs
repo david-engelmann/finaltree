@@ -45,6 +45,12 @@ pub fn pinned(command: &mut Command) -> &mut Command {
         .env("GIT_COMMITTER_DATE", "2024-01-01T00:00:00+00:00")
         .env_remove("GIT_DIR")
         .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES")
+        .env_remove("GIT_COMMON_DIR")
+        .env_remove("GIT_NAMESPACE")
+        .env_remove("GIT_PREFIX")
 }
 
 pub fn git(root: &Path, args: &[&str]) {

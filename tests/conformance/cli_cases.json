@@ -1458,6 +1458,61 @@
     {
      "run": {
       "argv": [
+       "-hx"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null,
+       "usage": "top"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null
+      }
+     }
+    }
+   ],
+   "name": "a help cluster at the top level",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "-hx"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null,
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null
+      }
+     }
+    }
+   ],
+   "name": "a help cluster on the fingerprint door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
        "fingerprint"
       ],
       "expect": {

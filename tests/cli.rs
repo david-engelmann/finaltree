@@ -468,7 +468,7 @@ fn test_cli_battery_matches_the_python_record() {
     );
     assert_eq!(
         count_of("arguments"),
-        26,
+        28,
         "the arguments section stands whole"
     );
     assert_eq!(
@@ -476,7 +476,7 @@ fn test_cli_battery_matches_the_python_record() {
         13,
         "the refusals section stands whole"
     );
-    assert_eq!(cases.len(), 67, "the battery stands whole");
+    assert_eq!(cases.len(), 69, "the battery stands whole");
 }
 
 fn run_words(words: &[&[u8]], cwd: &Path) -> (i64, Vec<u8>, Vec<u8>) {
