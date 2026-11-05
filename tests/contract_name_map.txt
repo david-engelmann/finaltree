@@ -1,0 +1,80 @@
+# The disposition of every test name the contract carries.
+# One line per standing proof, a name first and then its
+# disposition. A name may stand on more than one line where
+# its proof stands in more than one place. The dispositions
+# are rust-test with the file the test stands in,
+# recording-case with the recordings file and the case name,
+# and recording-section with the recordings file and the
+# section name.
+test_a_pattern_word_carrying_a_non_utf8_byte_is_carried rust-test tests/cli.rs
+test_a_stamped_log_nested_past_the_reader_bound_is_refused rust-test tests/cli.rs
+test_agents_md_stands_from_the_canonical_template rust-test tests/setup.rs
+test_any_member_change_changes_the_digest recording-section tests/conformance/port1_cases.json fingerprint_cases
+test_bare_name_pattern_matches_no_nested_file recording-case tests/conformance/port1_cases.json bare-name-nested-only
+test_broken_symlink_stands_apart_from_a_deleted_file recording-case tests/conformance/port1_cases.json broken-symlink
+test_cli_battery_matches_the_python_record rust-test tests/cli.rs
+test_conflicted_file_reads_with_a_conflicted_kind recording-case tests/conformance/port1_cases.json merge-conflict
+test_contract_has_no_forbidden_dashes rust-test tests/contract.rs
+test_deleted_tracked_file_carries_null_blob recording-case tests/conformance/port1_cases.json deleted-tracked
+test_digest_ignores_the_order_of_every_member_list recording-case tests/conformance/cli_cases.json a verify of a log whose record lists stand scrambled
+test_digest_ignores_the_order_of_every_member_list recording-section tests/conformance/port1_cases.json record_cases
+test_digest_is_canonical_and_order_independent recording-case tests/conformance/cli_cases.json a verify of a log whose record lists stand scrambled
+test_digest_is_canonical_and_order_independent recording-section tests/conformance/port1_cases.json record_cases
+test_dirty_entries_name_each_kind recording-case tests/conformance/port1_cases.json staged-and-modified
+test_dirty_entries_name_each_kind recording-case tests/conformance/port1_cases.json loose-untracked
+test_every_contract_name_is_disposed rust-test tests/contract.rs
+test_file_staged_and_modified_carries_both_entries recording-case tests/conformance/port1_cases.json staged-and-modified
+test_fingerprint_and_verify_leave_the_tree_unchanged recording-case tests/conformance/cli_cases.json a verify standing at match
+test_fingerprint_and_verify_leave_the_tree_unchanged recording-section tests/conformance/port1_cases.json fingerprint_cases
+test_fingerprint_holds_head_commit recording-case tests/conformance/port1_cases.json clean-base
+test_fixtures_are_synthetic_repos rust-test tests/setup.rs
+test_generated_artifacts_match_declared_patterns recording-case tests/conformance/port1_cases.json generated-declared
+test_generated_untracked_file_is_not_an_ordinary_dirty_entry recording-case tests/conformance/port1_cases.json generated-declared
+test_ignored_generated_artifact_is_listed recording-case tests/conformance/port1_cases.json generated-ignored
+test_index_blob_stands_beside_the_worktree_blob recording-case tests/conformance/port1_cases.json staged-and-modified
+test_path_spelled_with_non_utf8_bytes_is_refused recording-case tests/conformance/port1_cases.json non-utf8-path
+test_readme_records_the_closed_round_count rust-test tests/setup.rs
+test_readme_states_the_limits_of_the_fingerprint rust-test tests/setup.rs
+test_record_carrying_a_member_twice_is_refused recording-case tests/conformance/port1_cases.json duplicate-tracked-member
+test_record_carrying_a_member_twice_is_refused recording-case tests/conformance/port1_cases.json duplicate-dirty-pair
+test_record_dict_emits_members_in_canonical_order rust-test tests/cli.rs
+test_repo_without_a_commit_is_refused recording-case tests/conformance/port1_cases.json no-commit
+test_restaged_content_changes_the_fingerprint recording-case tests/conformance/port1_cases.json restaged-content
+test_rewrite_after_rm_cached_changes_the_fingerprint recording-case tests/conformance/port1_cases.json rm-cached-rewrite
+test_seed_files_present rust-test tests/setup.rs
+test_single_star_stays_within_one_folder recording-case tests/conformance/port1_cases.json nested-single-star
+test_staged_addition_is_tracked_before_commit recording-case tests/conformance/port1_cases.json staged-new-file
+test_staging_the_same_content_changes_the_fingerprint recording-case tests/conformance/cli_cases.json a fingerprint of the same content staged and unstaged
+test_stamp_binds_output_lines_to_the_fingerprint recording-case tests/conformance/port1_cases.json pass-command
+test_stamp_merges_stderr_into_the_output recording-case tests/conformance/port1_cases.json stderr-only
+test_stamp_returns_the_gate_exit_code recording-case tests/conformance/port1_cases.json fail-command
+test_stamp_writes_the_log_when_the_gate_fails recording-case tests/conformance/port1_cases.json fail-command
+test_stamped_log_carries_an_evidence_digest recording-case tests/conformance/port1_cases.json as-stamped
+test_subdirectory_of_a_tree_is_refused recording-case tests/conformance/port1_cases.json subdirectory-refusal
+test_symlink_tracked_blob_is_the_link_itself recording-case tests/conformance/port1_cases.json symlink-tracked
+test_tracked_files_sorted_with_worktree_blob_hashes recording-case tests/conformance/port1_cases.json clean-base
+test_untracked_content_change_changes_the_fingerprint recording-case tests/conformance/port1_cases.json loose-untracked
+test_untracked_content_change_changes_the_fingerprint recording-case tests/conformance/port1_cases.json untracked-content-changed
+test_verify_matches_the_tree_the_log_was_stamped_from recording-case tests/conformance/port1_cases.json unchanged
+test_verify_names_a_changed_file recording-case tests/conformance/port1_cases.json modified-file
+test_verify_names_a_cleaned_and_an_added_dirty_file recording-case tests/conformance/port1_cases.json dirty-cleaned-and-added
+test_verify_names_a_generated_difference_as_generated recording-case tests/conformance/port1_cases.json generated-differs-tracked
+test_verify_names_a_generated_difference_as_generated recording-case tests/conformance/port1_cases.json generated-differs-untracked
+test_verify_names_a_moved_commit recording-case tests/conformance/port1_cases.json commit-moved
+test_verify_names_an_index_difference recording-case tests/conformance/port1_cases.json index-and-content
+test_verify_names_an_untracked_content_change recording-case tests/conformance/port1_cases.json untracked-content-changed
+test_verify_names_tracked_files_added_and_removed recording-case tests/conformance/port1_cases.json tracked-removed
+test_verify_names_tracked_files_added_and_removed recording-case tests/conformance/port1_cases.json tracked-added
+test_verify_refuses_a_log_whose_digest_disagrees_with_its_members recording-case tests/conformance/port1_cases.json digest-line-disagrees
+test_verify_refuses_a_log_whose_record_carries_no_digest recording-case tests/conformance/port1_cases.json missing-digest
+test_verify_refuses_a_log_with_a_deleted_output_line recording-case tests/conformance/port1_cases.json deleted-output-line
+test_verify_refuses_a_log_with_a_flipped_exit_code recording-case tests/conformance/port1_cases.json flipped-exit-code
+test_verify_refuses_a_log_with_a_forged_output_line recording-case tests/conformance/port1_cases.json forged-output-line
+test_verify_refuses_a_log_with_an_edited_count_line recording-case tests/conformance/port1_cases.json edited-count-line
+test_verify_refuses_a_log_with_an_undecodable_fingerprint_record recording-case tests/conformance/port1_cases.json undecodable-record
+test_verify_refuses_a_log_with_content_after_the_output_section recording-case tests/conformance/port1_cases.json content-after-output
+test_verify_refuses_a_log_without_a_command_line recording-case tests/conformance/port1_cases.json missing-command-line
+test_verify_refuses_a_log_without_a_fingerprint_line recording-case tests/conformance/port1_cases.json missing-fingerprint-line
+test_verify_refuses_a_log_without_a_fingerprint_record recording-case tests/conformance/port1_cases.json missing-record-line
+test_verify_refuses_a_log_without_an_exit_code_line recording-case tests/conformance/port1_cases.json missing-exit-code-line
+test_verify_refuses_an_output_line_without_the_digest_prefix recording-case tests/conformance/port1_cases.json output-line-without-prefix

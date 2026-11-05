@@ -17,9 +17,10 @@ pub mod stamping;
 
 pub use errors::FinaltreeError;
 pub use fingerprint::{
-    compute_fingerprint, DirtyFile, Fingerprint, GeneratedFile, TrackedFile, UntrackedFile, FORMAT,
+    compute_fingerprint, compute_fingerprint_tokens, DirtyFile, Fingerprint, GeneratedFile,
+    TrackedFile, UntrackedFile, FORMAT,
 };
 pub use stamping::{
-    compare_fingerprints, read_stamped_log, run_and_stamp, verify_stamped_log, StampedLog,
-    VerificationResult, STAMP_FORMAT,
+    compare_fingerprints, read_stamped_log, run_and_stamp, run_and_stamp_tokens,
+    verify_stamped_log, verify_stamped_log_tokens, StampedLog, VerificationResult, STAMP_FORMAT,
 };

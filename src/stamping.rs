@@ -12,8 +12,8 @@ use std::process::{Command, Stdio};
 
 use crate::errors::FinaltreeError;
 use crate::fingerprint::{
-    compute_fingerprint, display_path, py_set_eq, sort_pairs, sort_values, DirtyFile, Fingerprint,
-    GeneratedFile, TrackedFile, UntrackedFile,
+    compute_fingerprint_tokens, display_path, py_set_eq, sort_pairs, sort_values, DirtyFile,
+    Fingerprint, GeneratedFile, TrackedFile, UntrackedFile,
 };
 use crate::intparse::{parse_python_int, py_is_space};
 use crate::jsonvalue::{parse_json, parse_json_lenient, JsonValue};
@@ -329,7 +329,22 @@ pub fn run_and_stamp(
     log_path: &Path,
     generated_patterns: &[String],
 ) -> Result<i32, FinaltreeError> {
-    let fingerprint = compute_fingerprint(root, generated_patterns)?;
+    let token_patterns: Vec<Vec<crate::glob::Token>> = generated_patterns
+        .iter()
+        .map(|pattern| crate::glob::tokens_of_text(pattern))
+        .collect();
+    run_and_stamp_tokens(root, command, log_path, &token_patterns)
+}
+
+/// Fingerprint the tree, run the gate command, write the
+/// stamped log, the declared patterns standing as tokens.
+pub fn run_and_stamp_tokens(
+    root: &Path,
+    command: &[String],
+    log_path: &Path,
+    generated_patterns: &[Vec<crate::glob::Token>],
+) -> Result<i32, FinaltreeError> {
+    let fingerprint = compute_fingerprint_tokens(root, generated_patterns)?;
     if command.is_empty() {
         // The Python reading raises on an empty command before
         // any run. The port refuses it in the error family.
@@ -648,8 +663,24 @@ pub fn verify_stamped_log(
     candidate_root: &Path,
     generated_patterns: Option<&[String]>,
 ) -> Result<VerificationResult, FinaltreeError> {
+    let token_patterns: Option<Vec<Vec<crate::glob::Token>>> = generated_patterns.map(|patterns| {
+        patterns
+            .iter()
+            .map(|pattern| crate::glob::tokens_of_text(pattern))
+            .collect()
+    });
+    verify_stamped_log_tokens(log_path, candidate_root, token_patterns.as_deref())
+}
+
+/// Verify a stamped log against a candidate tree, the
+/// declared patterns standing as tokens where they stand.
+pub fn verify_stamped_log_tokens(
+    log_path: &Path,
+    candidate_root: &Path,
+    generated_patterns: Option<&[Vec<crate::glob::Token>]>,
+) -> Result<VerificationResult, FinaltreeError> {
     let stamped = read_stamped_log(log_path)?;
-    let patterns: Vec<String> = match generated_patterns {
+    let patterns: Vec<Vec<crate::glob::Token>> = match generated_patterns {
         Some(patterns) => patterns.to_vec(),
         None => {
             // The patterns of the record stand as its values
@@ -659,7 +690,7 @@ pub fn verify_stamped_log(
             let mut texts = Vec::new();
             for pattern in &stamped.fingerprint.generated_patterns {
                 match pattern {
-                    JsonValue::Text(text) => texts.push(text.clone()),
+                    JsonValue::Text(text) => texts.push(crate::glob::tokens_of_text(text)),
                     _ => {
                         return Err(FinaltreeError::new(
                             "the fingerprint record does not decode",
@@ -670,7 +701,7 @@ pub fn verify_stamped_log(
             texts
         }
     };
-    let actual = compute_fingerprint(candidate_root, &patterns)?;
+    let actual = compute_fingerprint_tokens(candidate_root, &patterns)?;
     let differences = compare_fingerprints(&stamped.fingerprint, &actual)?;
     Ok(VerificationResult {
         matched: differences.is_empty(),

@@ -57,4 +57,4 @@ This annex is finaltree's alone. The canonical part above this repo's annex is n
 
 Finaltree asks what a gate ran on. Deadgate asks whether it ran, and blindgate asks what it read. Finaltree fingerprints the exact tree a gate ran on and binds that fingerprint to the evidence the gate reports.
 
-Fingerprints are computed from a local working tree with git only. Fixtures are synthetic repos built in the tests, and nothing in this repo touches the network. The local gate is python -m pytest and cargo test once the crate exists. The closed round count stands in the README and moves only at a closure.
+Fingerprints are computed from a local working tree with git only. Fixtures are synthetic repos built in the tests, and nothing in this repo touches the network. The local gate is cargo test. The closed round count stands in the README and moves only at a closure.
