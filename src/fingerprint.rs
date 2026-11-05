@@ -100,6 +100,38 @@ fn as_text(value: &JsonValue) -> &str {
     }
 }
 
+/// The record value of one pattern word standing as its
+/// tokens, a text where every token is a character and the
+/// surrogate text of its units where a byte stands among
+/// them, which is the spelling the fingerprint record carries
+/// for the word as given.
+pub fn pattern_record(tokens: &[glob::Token]) -> JsonValue {
+    if tokens
+        .iter()
+        .all(|token| matches!(token, glob::Token::Char(_)))
+    {
+        let text: String = tokens
+            .iter()
+            .map(|token| match token {
+                glob::Token::Char(ch) => *ch,
+                glob::Token::Byte(_) => unreachable!("a byte token stands apart"),
+            })
+            .collect();
+        return JsonValue::Text(text);
+    }
+    let mut units: Vec<u16> = Vec::new();
+    for token in tokens {
+        match token {
+            glob::Token::Char(ch) => {
+                let mut holding = [0u16; 2];
+                units.extend_from_slice(ch.encode_utf16(&mut holding));
+            }
+            glob::Token::Byte(byte) => units.push(0xDC00 + u16::from(*byte)),
+        }
+    }
+    JsonValue::SurrogateText(units)
+}
+
 /// The document form of a blob that may not stand.
 fn blob_value(blob: Option<String>) -> JsonValue {
     match blob {
@@ -873,11 +905,17 @@ fn content_blob(root: &Path, relative: &str) -> Result<Option<String>, Finaltree
     Ok(None)
 }
 
-fn generated_files(root: &Path, patterns: &[String]) -> Result<Vec<GeneratedFile>, FinaltreeError> {
+fn generated_files(
+    root: &Path,
+    patterns: &[Vec<glob::Token>],
+) -> Result<Vec<GeneratedFile>, FinaltreeError> {
     if patterns.is_empty() {
         return Ok(Vec::new());
     }
-    let compiled: Vec<glob::Pattern> = patterns.iter().map(|p| glob::translate(p)).collect();
+    let compiled: Vec<glob::Pattern> = patterns
+        .iter()
+        .map(|tokens| glob::translate_tokens(tokens))
+        .collect();
     if compiled.iter().any(|pattern| pattern.refused()) {
         // The expression reading refuses the translation, and
         // the landed Python surfaces that as an uncaught error
@@ -1046,6 +1084,22 @@ pub fn compute_fingerprint(
     root: &Path,
     generated_patterns: &[String],
 ) -> Result<Fingerprint, FinaltreeError> {
+    let token_patterns: Vec<Vec<glob::Token>> = generated_patterns
+        .iter()
+        .map(|pattern| glob::tokens_of_text(pattern))
+        .collect();
+    compute_fingerprint_tokens(root, &token_patterns)
+}
+
+/// Compute the fingerprint of a working tree with git only,
+/// the declared patterns standing as tokens, so a pattern
+/// word carrying a byte no UTF 8 sequence claims is matched
+/// in its bytes and carried in the record in its surrogate
+/// spelling.
+pub fn compute_fingerprint_tokens(
+    root: &Path,
+    generated_patterns: &[Vec<glob::Token>],
+) -> Result<Fingerprint, FinaltreeError> {
     if !root.is_dir() {
         return Err(FinaltreeError::new(format!(
             "the tree at {} does not stand",
@@ -1093,7 +1147,7 @@ pub fn compute_fingerprint(
             ))
         }
     };
-    let patterns: Vec<String> = generated_patterns.to_vec();
+    let patterns: Vec<Vec<glob::Token>> = generated_patterns.to_vec();
     let index = index_entries(root)?;
     let mut tracked = Vec::new();
     for (relative, index_blobs) in &index {
@@ -1165,7 +1219,7 @@ pub fn compute_fingerprint(
         untracked,
         generated_patterns: patterns
             .iter()
-            .map(|pattern| JsonValue::text(pattern.clone()))
+            .map(|tokens| pattern_record(tokens))
             .collect(),
     })
 }

@@ -1,0 +1,2517 @@
+{
+ "cases": [
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "fingerprint of a clean tree",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "a.txt",
+     "text": "alpha changed\n"
+    },
+    {
+     "op": "write",
+     "path": "b.txt",
+     "text": "beta changed\n"
+    },
+    {
+     "args": [
+      "add",
+      "b.txt"
+     ],
+     "op": "git"
+    },
+    {
+     "op": "write",
+     "path": "c.txt",
+     "text": "gamma\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"c30ce9080474ab07624d6cb7365dfb365f31b75d403d5c140e59834a384cdb29\",\n  \"dirty\": [\n    {\n      \"kind\": \"modified\",\n      \"path\": \"a.txt\"\n    },\n    {\n      \"kind\": \"staged\",\n      \"path\": \"b.txt\"\n    },\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"c.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"ec20141f0267805d3db1349c4701ed1f84f3ee61\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"6e8c5e4d6d23311d4eb745952390b1379fdd42ff\",\n      \"index_blobs\": [\n        \"6e8c5e4d6d23311d4eb745952390b1379fdd42ff\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"af17f6cc87e4d5e4adec0018cbb73d3e2bd008c8\",\n      \"path\": \"c.txt\"\n    }\n  ]\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"c30ce9080474ab07624d6cb7365dfb365f31b75d403d5c140e59834a384cdb29\",\n  \"dirty\": [\n    {\n      \"kind\": \"modified\",\n      \"path\": \"a.txt\"\n    },\n    {\n      \"kind\": \"staged\",\n      \"path\": \"b.txt\"\n    },\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"c.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"ec20141f0267805d3db1349c4701ed1f84f3ee61\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"6e8c5e4d6d23311d4eb745952390b1379fdd42ff\",\n      \"index_blobs\": [\n        \"6e8c5e4d6d23311d4eb745952390b1379fdd42ff\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"af17f6cc87e4d5e4adec0018cbb73d3e2bd008c8\",\n      \"path\": \"c.txt\"\n    }\n  ]\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "fingerprint of a dirty tree",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "loose.txt",
+     "text": "loose\n"
+    },
+    {
+     "op": "write",
+     "path": "notes/deep.txt",
+     "text": "deep\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"166461651f884f81b7abd2fa9a1704519a185b65b11bd8a11a1dbb73d83f0a02\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"loose.txt\"\n    },\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"notes/deep.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"b6586661e7ec0a4c9389276355d01e145861eb0c\",\n      \"path\": \"loose.txt\"\n    },\n    {\n      \"blob\": \"4cdb2265d30204be5463b38174b2e8e717982405\",\n      \"path\": \"notes/deep.txt\"\n    }\n  ]\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"166461651f884f81b7abd2fa9a1704519a185b65b11bd8a11a1dbb73d83f0a02\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"loose.txt\"\n    },\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"notes/deep.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"b6586661e7ec0a4c9389276355d01e145861eb0c\",\n      \"path\": \"loose.txt\"\n    },\n    {\n      \"blob\": \"4cdb2265d30204be5463b38174b2e8e717982405\",\n      \"path\": \"notes/deep.txt\"\n    }\n  ]\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "fingerprint of a tree with untracked files",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "out/app.gen",
+     "text": "generated one\n"
+    },
+    {
+     "op": "write",
+     "path": "top.gen",
+     "text": "generated two\n"
+    },
+    {
+     "op": "write",
+     "path": "plain.txt",
+     "text": "plain\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--generated",
+       "out/*.gen",
+       "--generated",
+       "top.gen"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"8e5433f928b467986f747b739305c0118ccc5437cedbd7017c73295401cb5a00\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"plain.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [\n    {\n      \"blob\": \"cf58516f78b59bf781cfb6283e2b4409acf63df1\",\n      \"path\": \"out/app.gen\"\n    },\n    {\n      \"blob\": \"71e7c75d3b1e1f0f5cab01cf820c66a9081c239e\",\n      \"path\": \"top.gen\"\n    }\n  ],\n  \"generated_patterns\": [\n    \"out/*.gen\",\n    \"top.gen\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"b9bca019c83a65e6d717d0b6da86215f45dde1b3\",\n      \"path\": \"plain.txt\"\n    }\n  ]\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"8e5433f928b467986f747b739305c0118ccc5437cedbd7017c73295401cb5a00\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"plain.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [\n    {\n      \"blob\": \"cf58516f78b59bf781cfb6283e2b4409acf63df1\",\n      \"path\": \"out/app.gen\"\n    },\n    {\n      \"blob\": \"71e7c75d3b1e1f0f5cab01cf820c66a9081c239e\",\n      \"path\": \"top.gen\"\n    }\n  ],\n  \"generated_patterns\": [\n    \"out/*.gen\",\n    \"top.gen\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"b9bca019c83a65e6d717d0b6da86215f45dde1b3\",\n      \"path\": \"plain.txt\"\n    }\n  ]\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "fingerprint with the generated patterns standing given",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "out/app.gen",
+     "text": "generated one\n"
+    },
+    {
+     "op": "write",
+     "path": "top.gen",
+     "text": "generated two\n"
+    },
+    {
+     "op": "write",
+     "path": "plain.txt",
+     "text": "plain\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"25fc918dc016aa87e73964b8505d5dbc7fd871cbe2ba526e5a74efece0504ce2\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"out/app.gen\"\n    },\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"plain.txt\"\n    },\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"top.gen\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"cf58516f78b59bf781cfb6283e2b4409acf63df1\",\n      \"path\": \"out/app.gen\"\n    },\n    {\n      \"blob\": \"b9bca019c83a65e6d717d0b6da86215f45dde1b3\",\n      \"path\": \"plain.txt\"\n    },\n    {\n      \"blob\": \"71e7c75d3b1e1f0f5cab01cf820c66a9081c239e\",\n      \"path\": \"top.gen\"\n    }\n  ]\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"25fc918dc016aa87e73964b8505d5dbc7fd871cbe2ba526e5a74efece0504ce2\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"out/app.gen\"\n    },\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"plain.txt\"\n    },\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"top.gen\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"cf58516f78b59bf781cfb6283e2b4409acf63df1\",\n      \"path\": \"out/app.gen\"\n    },\n    {\n      \"blob\": \"b9bca019c83a65e6d717d0b6da86215f45dde1b3\",\n      \"path\": \"plain.txt\"\n    },\n    {\n      \"blob\": \"71e7c75d3b1e1f0f5cab01cf820c66a9081c239e\",\n      \"path\": \"top.gen\"\n    }\n  ]\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "fingerprint with the generated patterns standing empty",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write_exec",
+     "path": "gate.sh",
+     "text": "#!/bin/sh\necho gate ok\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "./gate.sh",
+       "--log",
+       "{LOG}"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint 8e897b626a7b02da92208d2f0151e19c149688e4b03ab9e950f3c0392ddcf5c5\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"8e897b626a7b02da92208d2f0151e19c149688e4b03ab9e950f3c0392ddcf5c5\", \"dirty\": [{\"kind\": \"untracked\", \"path\": \"gate.sh\"}], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": [{\"blob\": \"180621f4f87242fbe1f3e837aea9f427e87f3df5\", \"path\": \"gate.sh\"}]}\ncommand-json [\"./gate.sh\"]\nexit-code 0\nevidence-digest 4e303bf0dab9b91095d2b376ca5a0ae7e9b2cb3b4b2ac23b895a925e1dcf18e7\nbegin-output\n8e897b626a7b02da92208d2f0151e19c149688e4b03ab9e950f3c0392ddcf5c5 | gate ok\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp whose gate passes",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write_exec",
+     "path": "gate.sh",
+     "text": "#!/bin/sh\necho gate broke\nexit 3\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "./gate.sh",
+       "--log",
+       "{LOG}"
+      ],
+      "expect": {
+       "exit": 3,
+       "log_text": "finaltree-stamped-log/1\nfingerprint cc1a12e4045f4f437db3430badc9f63b51cf5f2cbfb4f44596bb4b821a1048af\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"cc1a12e4045f4f437db3430badc9f63b51cf5f2cbfb4f44596bb4b821a1048af\", \"dirty\": [{\"kind\": \"untracked\", \"path\": \"gate.sh\"}], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": [{\"blob\": \"f968b5f7646945da43a548fb530eb3b73074fa78\", \"path\": \"gate.sh\"}]}\ncommand-json [\"./gate.sh\"]\nexit-code 3\nevidence-digest 3d52a0bcb0ea61fd920575f9333d2c1fecebb93ccc5b3c42117f2a18fc96a7b8\nbegin-output\ncc1a12e4045f4f437db3430badc9f63b51cf5f2cbfb4f44596bb4b821a1048af | gate broke\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 3,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp whose gate fails",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write_exec",
+     "path": "gate.sh",
+     "text": "#!/bin/sh\necho more >> a.txt\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "./gate.sh",
+       "--log",
+       "{LOG}"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint 1d2065eccd556b0f80131ea90be8bef5a86b070b5e53b76ca73b067844db15af\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"1d2065eccd556b0f80131ea90be8bef5a86b070b5e53b76ca73b067844db15af\", \"dirty\": [{\"kind\": \"untracked\", \"path\": \"gate.sh\"}], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": [{\"blob\": \"13dcf648220722c39cc2ea37d7eb4f59f3c7773d\", \"path\": \"gate.sh\"}]}\ncommand-json [\"./gate.sh\"]\nexit-code 0\nevidence-digest 13ab85712199f1352f404e5f965cbc700ebe207cca3be59ed73551d7924949cb\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\nfile content changed a.txt\ndirty file added a.txt (modified)\n"
+      },
+      "python": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\nfile content changed a.txt\ndirty file added a.txt (modified)\n"
+      }
+     }
+    }
+   ],
+   "name": "a stamp whose gate changes the tree",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "--log",
+       "{LOG}",
+       "{ROOT}",
+       "--",
+       "cat"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"cat\"]\nexit-code 0\nevidence-digest 08f83624a554ad1598d183673bce2f5d92bf7f150f4ab192bda26813215ae258\nbegin-output\nb9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e | gate ran\nb9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e | 12 passed\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      },
+      "stdin": "gate ran\n12 passed\n"
+     }
+    }
+   ],
+   "name": "a stamp whose gate reads its standard input",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write_exec",
+     "path": "gate.sh",
+     "text": "#!/bin/sh\necho gate ok\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "./gate.sh"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint 8e897b626a7b02da92208d2f0151e19c149688e4b03ab9e950f3c0392ddcf5c5\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"8e897b626a7b02da92208d2f0151e19c149688e4b03ab9e950f3c0392ddcf5c5\", \"dirty\": [{\"kind\": \"untracked\", \"path\": \"gate.sh\"}], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": [{\"blob\": \"180621f4f87242fbe1f3e837aea9f427e87f3df5\", \"path\": \"gate.sh\"}]}\ncommand-json [\"./gate.sh\"]\nexit-code 0\nevidence-digest 4e303bf0dab9b91095d2b376ca5a0ae7e9b2cb3b4b2ac23b895a925e1dcf18e7\nbegin-output\n8e897b626a7b02da92208d2f0151e19c149688e4b03ab9e950f3c0392ddcf5c5 | gate ok\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp with its command after the double dash",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "sh",
+       "-c",
+       "echo dashed"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"sh\", \"-c\", \"echo dashed\"]\nexit-code 0\nevidence-digest 754cf41b2a5ba8aaadad3b75c62f9dbfebc716d4462b10fdf89700a721d8df59\nbegin-output\nb9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e | dashed\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp whose gate takes flag shaped words",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      }
+     }
+    }
+   ],
+   "name": "a verify standing at match",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "op": "write",
+     "path": "a.txt",
+     "text": "alpha changed\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\nfile content changed a.txt\ndirty file added a.txt (modified)\n"
+      },
+      "python": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\nfile content changed a.txt\ndirty file added a.txt (modified)\n"
+      }
+     }
+    }
+   ],
+   "name": "a verify naming a changed file",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "op": "write",
+     "path": "a.txt",
+     "text": "alpha moved\n"
+    },
+    {
+     "op": "commit_all"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\ncommit moved from bfc796403436ca94ba349b83909c747628d5f6d3 to 951c65c16f021ba840aa7b50fd282e1c4dafe2f0\nfile content changed a.txt\nindex content changed a.txt\n"
+      },
+      "python": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\ncommit moved from bfc796403436ca94ba349b83909c747628d5f6d3 to 951c65c16f021ba840aa7b50fd282e1c4dafe2f0\nfile content changed a.txt\nindex content changed a.txt\n"
+      }
+     }
+    }
+   ],
+   "name": "a verify naming a moved commit",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "out/app.gen",
+     "text": "generated one\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--generated",
+       "out/*.gen",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint 80ab99388259693c0d29ecb2b045bdbf96ed4fadc60f9baa0bd60e2b904dccd7\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"80ab99388259693c0d29ecb2b045bdbf96ed4fadc60f9baa0bd60e2b904dccd7\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [{\"blob\": \"cf58516f78b59bf781cfb6283e2b4409acf63df1\", \"path\": \"out/app.gen\"}], \"generated_patterns\": [\"out/*.gen\"], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "op": "write",
+     "path": "out/app.gen",
+     "text": "generated two\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\ngenerated artifact differs out/app.gen\n"
+      },
+      "python": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\ngenerated artifact differs out/app.gen\n"
+      }
+     }
+    }
+   ],
+   "name": "a verify naming a generated difference",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "build.gen",
+     "text": "generated\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint dc25073638a931d8cc43bb77f1ee6b27e429bf5d2590dd163223ab2611d5881f\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"dc25073638a931d8cc43bb77f1ee6b27e429bf5d2590dd163223ab2611d5881f\", \"dirty\": [{\"kind\": \"untracked\", \"path\": \"build.gen\"}], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": [{\"blob\": \"86d4c2dd380eb2e9e2a050e882f40bc65dc2a48b\", \"path\": \"build.gen\"}]}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}",
+       "--generated",
+       "*.gen"
+      ],
+      "expect": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\ndirty file cleaned build.gen (untracked)\ngenerated artifact added build.gen\n"
+      },
+      "python": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\ndirty file cleaned build.gen (untracked)\ngenerated artifact added build.gen\n"
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      }
+     }
+    }
+   ],
+   "name": "a verify with patterns given against patterns absent",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      }
+     }
+    }
+   ],
+   "name": "a root spelled with a non utf8 byte",
+   "root_name_b64": "YmFkLf8tdHJlZQ==",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write_exec",
+     "path": "gate.sh",
+     "text": "#!/bin/sh\necho oops >&2\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "./gate.sh",
+       "--log",
+       "{LOG}"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint 9390ca97a5cd8bce9d50f24df58402bb6ad534756e5e24ca1120e937888ff08e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"9390ca97a5cd8bce9d50f24df58402bb6ad534756e5e24ca1120e937888ff08e\", \"dirty\": [{\"kind\": \"untracked\", \"path\": \"gate.sh\"}], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": [{\"blob\": \"bc7408aefbc1a3595d7b3780c7135269e3ad7e69\", \"path\": \"gate.sh\"}]}\ncommand-json [\"./gate.sh\"]\nexit-code 0\nevidence-digest ca6dabf4741959c5e71debb13597809f0ed94099493fb7a12b3243fe3223dda5\nbegin-output\n9390ca97a5cd8bce9d50f24df58402bb6ad534756e5e24ca1120e937888ff08e | oops\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp whose gate writes to standard error",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--generated",
+       "a\udcffb"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"a\\udcffb\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"a\\udcffb\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a fingerprint with a pattern word carrying a byte",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}",
+       "--generated",
+       "a\udcffb"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      }
+     }
+    }
+   ],
+   "name": "a verify with a pattern word carrying a byte",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "a.txt",
+     "text": "alpha changed\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"de7690b2164cbbf9c7197af44cacce678090c9124ab851b4739a4244e870ed92\",\n  \"dirty\": [\n    {\n      \"kind\": \"modified\",\n      \"path\": \"a.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"ec20141f0267805d3db1349c4701ed1f84f3ee61\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"de7690b2164cbbf9c7197af44cacce678090c9124ab851b4739a4244e870ed92\",\n  \"dirty\": [\n    {\n      \"kind\": \"modified\",\n      \"path\": \"a.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"ec20141f0267805d3db1349c4701ed1f84f3ee61\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    },
+    {
+     "args": [
+      "add",
+      "a.txt"
+     ],
+     "op": "git"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"858242f7277a2ea7990e6689a7cc5741888718b3b5ed1f1910b6f6174d7b8e0a\",\n  \"dirty\": [\n    {\n      \"kind\": \"staged\",\n      \"path\": \"a.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"ec20141f0267805d3db1349c4701ed1f84f3ee61\",\n      \"index_blobs\": [\n        \"ec20141f0267805d3db1349c4701ed1f84f3ee61\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"858242f7277a2ea7990e6689a7cc5741888718b3b5ed1f1910b6f6174d7b8e0a\",\n  \"dirty\": [\n    {\n      \"kind\": \"staged\",\n      \"path\": \"a.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"ec20141f0267805d3db1349c4701ed1f84f3ee61\",\n      \"index_blobs\": [\n        \"ec20141f0267805d3db1349c4701ed1f84f3ee61\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a fingerprint of the same content staged and unstaged",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "u1.txt",
+     "text": "one\n"
+    },
+    {
+     "op": "write",
+     "path": "u2.txt",
+     "text": "two\n"
+    },
+    {
+     "op": "write",
+     "path": "u3.txt",
+     "text": "three\n"
+    },
+    {
+     "op": "write",
+     "path": "a.txt",
+     "text": "alpha changed\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint fc7bee228129347540360204c6c810cea5479113c8dc2b8308584c96d4054ec0\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"fc7bee228129347540360204c6c810cea5479113c8dc2b8308584c96d4054ec0\", \"dirty\": [{\"kind\": \"modified\", \"path\": \"a.txt\"}, {\"kind\": \"untracked\", \"path\": \"u1.txt\"}, {\"kind\": \"untracked\", \"path\": \"u2.txt\"}, {\"kind\": \"untracked\", \"path\": \"u3.txt\"}], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"ec20141f0267805d3db1349c4701ed1f84f3ee61\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": [{\"blob\": \"5626abf0f72e58d7a153368ba57db4c673c0e171\", \"path\": \"u1.txt\"}, {\"blob\": \"f719efd430d52bcfc8566a43b2eb655688d38871\", \"path\": \"u2.txt\"}, {\"blob\": \"2bdf67abb163a4ffb2d7f3f0880c9fe5068ce782\", \"path\": \"u3.txt\"}]}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "op": "scramble_log"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "match\n"
+      }
+     }
+    }
+   ],
+   "name": "a verify of a log whose record lists stand scrambled",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "gen-\ue000x.txt",
+     "text": "gen\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--generated",
+       "gen-\udc80*"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"8652883dc70639e7741366057da71792ae331118775a4f72c71289b0ef326250\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"gen-\\ue000x.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"gen-\\udc80*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"gen-\\ue000x.txt\"\n    }\n  ]\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"8652883dc70639e7741366057da71792ae331118775a4f72c71289b0ef326250\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"gen-\\ue000x.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"gen-\\udc80*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"gen-\\ue000x.txt\"\n    }\n  ]\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a byte pattern over a path carrying a private use character",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "\ue000x.txt",
+     "text": "gen\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--generated",
+       "[\udc80]*"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"21d7bf39c2c64a48cda130c4a5c1273dd9deac44598aa24869a69a279fa90b6d\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"\\ue000x.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"[\\udc80]*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"\\ue000x.txt\"\n    }\n  ]\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"21d7bf39c2c64a48cda130c4a5c1273dd9deac44598aa24869a69a279fa90b6d\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"\\ue000x.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"[\\udc80]*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"\\ue000x.txt\"\n    }\n  ]\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a byte pattern in a bracket list over a private use path",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "\ue000x.txt",
+     "text": "gen\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--generated",
+       "[g\udc80]*"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"21d7bf39c2c64a48cda130c4a5c1273dd9deac44598aa24869a69a279fa90b6d\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"\\ue000x.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"[g\\udc80]*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"\\ue000x.txt\"\n    }\n  ]\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"21d7bf39c2c64a48cda130c4a5c1273dd9deac44598aa24869a69a279fa90b6d\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"\\ue000x.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"[g\\udc80]*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"\\ue000x.txt\"\n    }\n  ]\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a mixed bracket byte pattern over a private use path",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "gen-\ue001x.txt",
+     "text": "gen\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--generated",
+       "gen-[\udc80-\udc82]*"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"7e84be9ef52c84c85da685793bea344723ba822859d015f0d4d8505fb0e13ebd\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"gen-\\ue001x.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"gen-[\\udc80-\\udc82]*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"gen-\\ue001x.txt\"\n    }\n  ]\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"7e84be9ef52c84c85da685793bea344723ba822859d015f0d4d8505fb0e13ebd\",\n  \"dirty\": [\n    {\n      \"kind\": \"untracked\",\n      \"path\": \"gen-\\ue001x.txt\"\n    }\n  ],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"gen-[\\udc80-\\udc82]*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"gen-\\ue001x.txt\"\n    }\n  ]\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a ranged bracket byte pattern over a private use path",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "gen-\ue000x.txt",
+     "text": "gen\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--generated",
+       "gen-\ue000*"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"bb8af809f0ad6ba50dabaae31e2f39bc7c94e06a06e1812d549e839aa7c41c30\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"gen-\\ue000x.txt\"\n    }\n  ],\n  \"generated_patterns\": [\n    \"gen-\\ue000*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"bb8af809f0ad6ba50dabaae31e2f39bc7c94e06a06e1812d549e839aa7c41c30\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [\n    {\n      \"blob\": \"4f62b849d56cd043cb9725fe73e9f49522d3d931\",\n      \"path\": \"gen-\\ue000x.txt\"\n    }\n  ],\n  \"generated_patterns\": [\n    \"gen-\\ue000*\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a private use pattern matching its own file",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "op": "write",
+     "path": "gen-\ue000x.txt",
+     "text": "gen\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}",
+       "--generated",
+       "gen-\udc80*"
+      ],
+      "expect": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\ndirty file added gen-\ue000x.txt (untracked)\n"
+      },
+      "python": {
+       "exit": 1,
+       "stderr": "",
+       "stdout": "mismatch\ndirty file added gen-\ue000x.txt (untracked)\n"
+      }
+     }
+    }
+   ],
+   "name": "a verify naming a private use path the byte pattern does not claim",
+   "section": "behaviours"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "top"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "no door stands",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "bogus"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "top"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "an unknown door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "-h"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null,
+       "usage": "top"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null
+      }
+     }
+    }
+   ],
+   "name": "help at the top level",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "-h"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null,
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null
+      }
+     }
+    }
+   ],
+   "name": "help on the fingerprint door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "-h"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null,
+       "usage": "stamp"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null
+      }
+     }
+    }
+   ],
+   "name": "help on the stamp door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "LOG",
+       "ROOT",
+       "-h"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null,
+       "usage": "verify"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null
+      }
+     }
+    }
+   ],
+   "name": "help on the verify door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a missing positional on the fingerprint door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "LOG"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "verify"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a missing positional on the verify door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "ROOT",
+       "CMD"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "stamp"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a missing log flag on the stamp door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "ROOT",
+       "--log",
+       "L"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a flag the door does not carry",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "ROOT",
+       "--log",
+       "L",
+       "CMD"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "stamp"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "the stamp collection refusal",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write_exec",
+     "path": "gate.sh",
+     "text": "#!/bin/sh\necho gate ok\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "./gate.sh",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint 8e897b626a7b02da92208d2f0151e19c149688e4b03ab9e950f3c0392ddcf5c5\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"8e897b626a7b02da92208d2f0151e19c149688e4b03ab9e950f3c0392ddcf5c5\", \"dirty\": [{\"kind\": \"untracked\", \"path\": \"gate.sh\"}], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": [{\"blob\": \"180621f4f87242fbe1f3e837aea9f427e87f3df5\", \"path\": \"gate.sh\"}]}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "the split side wins over the collected command",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write",
+     "path": "top.gen",
+     "text": "generated\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--generated=top.gen",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"a2d60ee9dea51e18ddc261bf01f987130335c6e42ab7584e0f8bc5bdf466519b\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [\n    {\n      \"blob\": \"86d4c2dd380eb2e9e2a050e882f40bc65dc2a48b\",\n      \"path\": \"top.gen\"\n    }\n  ],\n  \"generated_patterns\": [\n    \"top.gen\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"a2d60ee9dea51e18ddc261bf01f987130335c6e42ab7584e0f8bc5bdf466519b\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [\n    {\n      \"blob\": \"86d4c2dd380eb2e9e2a050e882f40bc65dc2a48b\",\n      \"path\": \"top.gen\"\n    }\n  ],\n  \"generated_patterns\": [\n    \"top.gen\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--gen",
+       "top.gen"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"a2d60ee9dea51e18ddc261bf01f987130335c6e42ab7584e0f8bc5bdf466519b\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [\n    {\n      \"blob\": \"86d4c2dd380eb2e9e2a050e882f40bc65dc2a48b\",\n      \"path\": \"top.gen\"\n    }\n  ],\n  \"generated_patterns\": [\n    \"top.gen\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"a2d60ee9dea51e18ddc261bf01f987130335c6e42ab7584e0f8bc5bdf466519b\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [\n    {\n      \"blob\": \"86d4c2dd380eb2e9e2a050e882f40bc65dc2a48b\",\n      \"path\": \"top.gen\"\n    }\n  ],\n  \"generated_patterns\": [\n    \"top.gen\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "the equals form and the abbreviation of a flag",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--generated"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a flag value that does not stand",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--generated",
+       "-h"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "the help flag standing where a value stands",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--help=x"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a value standing on the help flag",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "-x",
+       "-h"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null,
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": null
+      }
+     }
+    }
+   ],
+   "name": "an unknown flag standing before the help flag",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--generated",
+       "-1",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"-1\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"-1\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a negative number word as a flag value",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--generated",
+       "-",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"-\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"-\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a lone dash as a flag value",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "the separator standing in the fingerprint door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "--",
+       "fingerprint",
+       "ROOT"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "top"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a double dash standing before the door",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "Fingerprint",
+       "ROOT"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "top"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a door word in the wrong case",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--generated",
+       "-x y",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"-x y\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": "{\n  \"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\",\n  \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\",\n  \"dirty\": [],\n  \"format\": \"finaltree-fingerprint/1\",\n  \"generated\": [],\n  \"generated_patterns\": [\n    \"-x y\"\n  ],\n  \"tracked\": [\n    {\n      \"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\",\n      \"index_blobs\": [\n        \"4a58007052a65fbc2fc3f910f2855f45a4058e74\"\n      ],\n      \"path\": \"a.txt\"\n    },\n    {\n      \"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\",\n      \"index_blobs\": [\n        \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"\n      ],\n      \"path\": \"b.txt\"\n    }\n  ],\n  \"untracked\": []\n}\n"
+      }
+     }
+    }
+   ],
+   "name": "a word carrying a space as a flag value",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "ROOT",
+       "--",
+       "EXTRA"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "fingerprint"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a surplus word after the separator",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "--",
+       "CMD"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": "",
+       "usage": "stamp"
+      },
+      "python": {
+       "exit": 2,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp command standing without a root",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "--",
+       "--"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. the tree at -- does not stand\n",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 2,
+       "stderr": "error. the tree at -- does not stand\n",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a second double dash standing as a positional",
+   "section": "arguments"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. the tree at {ROOT} is not a git working tree\n",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 2,
+       "stderr": "error. the tree at {ROOT} is not a git working tree\n",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a tree that is not a repository",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}-missing"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. the tree at {ROOT}-missing does not stand\n",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 2,
+       "stderr": "error. the tree at {ROOT}-missing does not stand\n",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a root that does not stand",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "op": "write_log",
+     "text": "just some text\n"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. the stamped log carries no finaltree header\n",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 2,
+       "stderr": "error. the stamped log carries no finaltree header\n",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a log without a fingerprint record",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 0,
+       "log_text": "finaltree-stamped-log/1\nfingerprint b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\nfingerprint-json {\"commit\": \"bfc796403436ca94ba349b83909c747628d5f6d3\", \"digest\": \"b9c0899415a491bc27d5da0ef5fc3abda7621e6fca0a4404dbf0f6569df7cd7e\", \"dirty\": [], \"format\": \"finaltree-fingerprint/1\", \"generated\": [], \"generated_patterns\": [], \"tracked\": [{\"blob\": \"4a58007052a65fbc2fc3f910f2855f45a4058e74\", \"index_blobs\": [\"4a58007052a65fbc2fc3f910f2855f45a4058e74\"], \"path\": \"a.txt\"}, {\"blob\": \"65b2df87f7df3aeedef04be96703e55ac19c2cfb\", \"index_blobs\": [\"65b2df87f7df3aeedef04be96703e55ac19c2cfb\"], \"path\": \"b.txt\"}], \"untracked\": []}\ncommand-json [\"true\"]\nexit-code 0\nevidence-digest 3170192aa97c4b3f7d90d4b9314778785c70e2c82ab0bb54abba08a4cbb012ac\nbegin-output\nend-output\n",
+       "stderr": "",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 0,
+       "stderr": "",
+       "stdout": ""
+      }
+     }
+    },
+    {
+     "from": "exit-code 0",
+     "op": "edit_log",
+     "to": "exit-code 1"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. the evidence digest in the stamped log disagrees with the command and exit code and output it covers\n",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 2,
+       "stderr": "error. the evidence digest in the stamped log disagrees with the command and exit code and output it covers\n",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a log whose evidence disagrees",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "definitely-missing-gate-binary-xyz"
+      ],
+      "expect": {
+       "exit": 2,
+       "log_absent": true,
+       "stderr": null,
+       "stderr_prefix": "error. the gate command could not be run. ",
+       "stdout": ""
+      },
+      "python": {
+       "crash": true,
+       "exit": 1,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a gate command that cannot be started",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "fingerprint",
+       "{ROOT}",
+       "--generated",
+       "[z-a]"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. a generated pattern does not translate\n",
+       "stdout": ""
+      },
+      "python": {
+       "crash": true,
+       "exit": 1,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a pattern that does not translate",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--generated",
+       "a\udcffb",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 2,
+       "log_absent": true,
+       "stderr": "error. a generated pattern is not UTF-8 text\n",
+       "stdout": ""
+      },
+      "python": {
+       "crash": true,
+       "exit": 1,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp pattern word carrying a byte",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOG}",
+       "--",
+       "sh",
+       "-c",
+       "echo word-\udcff"
+      ],
+      "expect": {
+       "exit": 2,
+       "log_absent": true,
+       "stderr": "error. a gate command word is not UTF-8 text\n",
+       "stdout": ""
+      },
+      "python": {
+       "crash": true,
+       "exit": 1,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp command word carrying a byte",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "--log",
+       "{LOGDIR}",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 2,
+       "log_absent": true,
+       "stderr": "error. the stamped log at {LOGDIR} cannot be written\n",
+       "stdout": ""
+      },
+      "python": {
+       "crash": true,
+       "exit": 1,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp log inside a missing folder",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}",
+       "true",
+       "--log",
+       ""
+      ],
+      "expect": {
+       "exit": 2,
+       "log_absent": true,
+       "stderr": "error. the stamped log at . cannot be written\n",
+       "stdout": ""
+      },
+      "python": {
+       "crash": true,
+       "exit": 1,
+       "stderr": null,
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp with an empty log word",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "init"
+    },
+    {
+     "run": {
+      "argv": [
+       "verify",
+       "{LOG}",
+       "{ROOT}"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. the stamped log at {LOG} cannot be read\n",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 2,
+       "stderr": "error. the stamped log at {LOG} cannot be read\n",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a verify of a log that does not stand",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}-missing",
+       "--log",
+       "{LOG}",
+       "--generated",
+       "a\udcffb",
+       "--",
+       "true"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. the tree at {ROOT}-missing does not stand\n",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 2,
+       "stderr": "error. the tree at {ROOT}-missing does not stand\n",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp pattern word standing behind the tree refusal",
+   "section": "refusals"
+  },
+  {
+   "actions": [
+    {
+     "op": "plain"
+    },
+    {
+     "run": {
+      "argv": [
+       "stamp",
+       "{ROOT}-missing",
+       "--log",
+       "{LOG}",
+       "--",
+       "echo word-\udcff"
+      ],
+      "expect": {
+       "exit": 2,
+       "stderr": "error. the tree at {ROOT}-missing does not stand\n",
+       "stdout": ""
+      },
+      "python": {
+       "exit": 2,
+       "stderr": "error. the tree at {ROOT}-missing does not stand\n",
+       "stdout": ""
+      }
+     }
+    }
+   ],
+   "name": "a stamp command word standing behind the tree refusal",
+   "section": "refusals"
+  }
+ ],
+ "format": "finaltree-cli-cases/1",
+ "note": "Recorded by running the landed Python command line as a black box over these invocations, in scratch directories holding synthetic trees built with git under a fixed identity and fixed dates. A step whose standard error carries the argument reader usage text records no standard error text, because the contract states the argument reader texts stand outside the port, and the runner asserts the binary writes its own usage line for such a step. A step the Python command dies on uncaught records the crash and no standard error text, and its expected standing is the refusal the contract states for that failure. The placeholder {ROOT} stands for the root of the tree a case built, {LOG} for the stamped log standing beside it, and {LOGDIR} for a log path inside a folder that does not stand."
+}
