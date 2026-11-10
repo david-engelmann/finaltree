@@ -6,6 +6,10 @@ Provenance for gate results, fingerprinting the exact tree under test, commit, d
 
 Gate results get quoted from logs inherited from a superseded tree, and counts get reported from builds that never included the final commit, a failure careful teams currently defend against by checking log provenance by hand. Finaltree makes that rule a tool. It fingerprints the exact tree a gate ran on and binds the fingerprint to everything the gate reports, so a verdict can always be traced to the code it was measured on. The boundary with its siblings is one sentence. Finaltree asks what it ran on, where deadgate asks whether it ran and blindgate asks what it read.
 
+## Examples
+
+The examples folder holds two worked examples with their inputs and captured outputs. One fingerprints a small tree holding a modified file, a staged file, an untracked file, and a generated artifact. The other stamps a gate run on a clean tree and verifies the stamped log against the tree unchanged and changed.
+
 ## Status
 
 - Closed rounds stand at 3 of 100

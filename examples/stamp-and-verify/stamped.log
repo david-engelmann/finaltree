@@ -1,0 +1,10 @@
+finaltree-stamped-log/1
+fingerprint ea30bdcfcff91b034c09dde045eed59ea966b810900a27e3a3f2f359494dafb8
+fingerprint-json {"commit": "43984758cf79f17bdfbb4c1e11011c60f418cdd6", "digest": "ea30bdcfcff91b034c09dde045eed59ea966b810900a27e3a3f2f359494dafb8", "dirty": [], "format": "finaltree-fingerprint/1", "generated": [], "generated_patterns": [], "tracked": [{"blob": "4a58007052a65fbc2fc3f910f2855f45a4058e74", "index_blobs": ["4a58007052a65fbc2fc3f910f2855f45a4058e74"], "path": "a.txt"}, {"blob": "65b2df87f7df3aeedef04be96703e55ac19c2cfb", "index_blobs": ["65b2df87f7df3aeedef04be96703e55ac19c2cfb"], "path": "b.txt"}, {"blob": "b37890667aa0eaa83432aef480d3eca2069ebf42", "index_blobs": ["b37890667aa0eaa83432aef480d3eca2069ebf42"], "path": "gate.sh"}], "untracked": []}
+command-json ["sh", "gate.sh"]
+exit-code 0
+evidence-digest 82e0becf6b7142cb55cfe420bdaf03602d29b7e08617ad189525248464c30910
+begin-output
+ea30bdcfcff91b034c09dde045eed59ea966b810900a27e3a3f2f359494dafb8 | 12 tests ran
+ea30bdcfcff91b034c09dde045eed59ea966b810900a27e3a3f2f359494dafb8 | 12 passed
+end-output
