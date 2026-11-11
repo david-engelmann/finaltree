@@ -1,0 +1,3 @@
+mismatch
+file content changed b.txt
+dirty file added b.txt (modified)

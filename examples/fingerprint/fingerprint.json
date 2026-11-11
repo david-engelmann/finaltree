@@ -1,0 +1,57 @@
+{
+  "commit": "e8083ec406a6427fd5898c16b56e80d503909fd7",
+  "digest": "e206b3556bbadf8893db16e57d5355885a9c01db9334cabf31fd1a80c1e7fb6b",
+  "dirty": [
+    {
+      "kind": "modified",
+      "path": "a.txt"
+    },
+    {
+      "kind": "staged",
+      "path": "b.txt"
+    },
+    {
+      "kind": "untracked",
+      "path": "notes.txt"
+    }
+  ],
+  "format": "finaltree-fingerprint/1",
+  "generated": [
+    {
+      "blob": "aa69f30c855e87859d78c03e48a5a64cd29cc90e",
+      "path": "build/out.bin"
+    }
+  ],
+  "generated_patterns": [
+    "build/*"
+  ],
+  "tracked": [
+    {
+      "blob": "ec20141f0267805d3db1349c4701ed1f84f3ee61",
+      "index_blobs": [
+        "4a58007052a65fbc2fc3f910f2855f45a4058e74"
+      ],
+      "path": "a.txt"
+    },
+    {
+      "blob": "0bb019b5a82a1aaf7f3a53519b5d35357683b36d",
+      "index_blobs": [
+        "0bb019b5a82a1aaf7f3a53519b5d35357683b36d"
+      ],
+      "path": "b.txt"
+    },
+    {
+      "blob": "11b15b1a4584b08fa423a57964bdbf018b0da0d5",
+      "index_blobs": [
+        "11b15b1a4584b08fa423a57964bdbf018b0da0d5"
+      ],
+      "path": "src/app.py"
+    }
+  ],
+  "untracked": [
+    {
+      "blob": "af17f6cc87e4d5e4adec0018cbb73d3e2bd008c8",
+      "path": "notes.txt"
+    }
+  ]
+}
