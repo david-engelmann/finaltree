@@ -32,5 +32,6 @@ printf 'beta\n' > tree/b.txt
 cp gate.sh tree/gate.sh
 chmod +x tree/gate.sh
 git -C tree init -q -b main --object-format=sha1
+git -C tree config core.attributesFile /dev/null
 git -C tree add -A
 git -C tree commit -qm initial

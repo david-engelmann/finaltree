@@ -32,6 +32,7 @@ printf 'alpha\n' > tree/a.txt
 printf 'beta\n' > tree/b.txt
 printf 'print("hello")\n' > tree/src/app.py
 git -C tree init -q -b main --object-format=sha1
+git -C tree config core.attributesFile /dev/null
 git -C tree add -A
 git -C tree commit -qm initial
 printf 'alpha changed\n' > tree/a.txt
