@@ -71,7 +71,7 @@ fn test_agents_md_stands_from_the_canonical_template() {
 #[test]
 fn test_readme_records_the_closed_round_count() {
     let readme = read_repo_file("README.md");
-    assert!(readme.contains("Closed rounds stand at 3 of 100"));
+    assert!(readme.contains("Closed rounds stand at 4 of 100"));
 }
 
 #[test]
