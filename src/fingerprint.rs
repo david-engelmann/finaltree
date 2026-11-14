@@ -184,13 +184,29 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
     let _ = sort_raw(&mut dirty, &["path", "kind"]);
     let _ = sort_raw(&mut generated, &["path"]);
     let _ = sort_raw(&mut untracked, &["path"]);
-    JsonValue::object(vec![
+    let mut pairs = vec![
         ("format", JsonValue::text(FORMAT)),
         ("commit", fingerprint.commit.clone()),
         ("tracked", JsonValue::List(tracked)),
         ("dirty", JsonValue::List(dirty)),
         ("generated", JsonValue::List(generated)),
         ("untracked", JsonValue::List(untracked)),
+    ];
+    if !fingerprint.submodules.is_empty() {
+        let mut submodules: Vec<JsonValue> =
+            fingerprint.submodules.iter().map(submodule_entry).collect();
+        let _ = sort_raw(&mut submodules, &["path"]);
+        pairs.push(("submodules", JsonValue::List(submodules)));
+    }
+    JsonValue::object(pairs)
+}
+
+fn submodule_entry(entry: &SubmoduleEntry) -> JsonValue {
+    JsonValue::object(vec![
+        ("path", entry.path.clone()),
+        ("index_commit", entry.index_commit.clone()),
+        ("head", entry.head.clone()),
+        ("digest", entry.digest.clone()),
     ])
 }
 
@@ -220,9 +236,10 @@ fn refuse_duplicate_raw(
     generated: &[JsonValue],
     untracked: &[JsonValue],
     dirty: &[JsonValue],
+    submodules: &[JsonValue],
 ) -> Result<(), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
-    for members in [tracked, generated, untracked] {
+    for members in [tracked, generated, untracked, submodules] {
         let mut seen: Vec<&JsonValue> = Vec::new();
         for entry in members {
             let path = entry.get("path").ok_or_else(decode)?;
@@ -566,6 +583,7 @@ fn raw_payload(
     dirty: &[JsonValue],
     generated: &[JsonValue],
     untracked: &[JsonValue],
+    submodules: Option<&[JsonValue]>,
 ) -> Option<JsonValue> {
     let mut tracked = tracked.to_vec();
     sort_raw(&mut tracked, &["path"])?;
@@ -575,14 +593,20 @@ fn raw_payload(
     sort_raw(&mut generated, &["path"])?;
     let mut untracked = untracked.to_vec();
     sort_raw(&mut untracked, &["path"])?;
-    Some(JsonValue::object(vec![
+    let mut pairs = vec![
         ("format", JsonValue::text(FORMAT)),
         ("commit", commit.clone()),
         ("tracked", JsonValue::List(tracked)),
         ("dirty", JsonValue::List(dirty)),
         ("generated", JsonValue::List(generated)),
         ("untracked", JsonValue::List(untracked)),
-    ]))
+    ];
+    if let Some(submodules) = submodules {
+        let mut submodules = submodules.to_vec();
+        sort_raw(&mut submodules, &["path"])?;
+        pairs.push(("submodules", JsonValue::List(submodules)));
+    }
+    Some(JsonValue::object(pairs))
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -593,6 +617,20 @@ pub struct Fingerprint {
     pub generated: Vec<GeneratedFile>,
     pub untracked: Vec<UntrackedFile>,
     pub generated_patterns: Vec<JsonValue>,
+    pub submodules: Vec<SubmoduleEntry>,
+}
+
+/// One submodule of the tree, the commit the index records
+/// for its gitlink, the commit its checkout stands at, and
+/// the digest of its own fingerprint, the head and the
+/// digest standing null where the submodule does not stand
+/// checked out as its own working tree.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubmoduleEntry {
+    pub path: JsonValue,
+    pub index_commit: JsonValue,
+    pub head: JsonValue,
+    pub digest: JsonValue,
 }
 
 impl Fingerprint {
@@ -627,12 +665,19 @@ impl Fingerprint {
         let raw_dirty = read_raw_members(data, "dirty", true, false)?;
         let raw_generated = read_raw_members(data, "generated", true, false)?;
         let raw_untracked = read_raw_members(data, "untracked", false, false)?;
+        let (raw_submodules, submodules_stand) = read_raw_submodules(data)?;
         let commit_raw = data.get("commit").cloned().ok_or_else(decode)?;
         let patterns_raw: Vec<JsonValue> = match data.get("generated_patterns") {
             None => Vec::new(),
             Some(value) => raw_sequence(value).ok_or_else(decode)?,
         };
-        refuse_duplicate_raw(&raw_tracked, &raw_generated, &raw_untracked, &raw_dirty)?;
+        refuse_duplicate_raw(
+            &raw_tracked,
+            &raw_generated,
+            &raw_untracked,
+            &raw_dirty,
+            &raw_submodules,
+        )?;
         let recorded = match data.get("digest") {
             None => {
                 return Err(FinaltreeError::new(
@@ -653,6 +698,11 @@ impl Fingerprint {
             &raw_dirty,
             &raw_generated,
             &raw_untracked,
+            if submodules_stand {
+                Some(&raw_submodules)
+            } else {
+                None
+            },
         )
         .ok_or_else(decode)?;
         // A lone surrogate standing in a value the digest
@@ -660,9 +710,15 @@ impl Fingerprint {
         // payload is encoded, with the standing words for a
         // string that cannot stand in the serialization.
         if commit_raw.contains_surrogate()
-            || [&raw_tracked, &raw_dirty, &raw_generated, &raw_untracked]
-                .iter()
-                .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
+            || [
+                &raw_tracked,
+                &raw_dirty,
+                &raw_generated,
+                &raw_untracked,
+                &raw_submodules,
+            ]
+            .iter()
+            .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
         {
             return Err(FinaltreeError::new(
                 "the fingerprint record holds a path that is not valid UTF-8",
@@ -698,6 +754,7 @@ impl Fingerprint {
             generated: raw_generated.iter().map(member_generated).collect(),
             untracked: raw_untracked.iter().map(member_untracked).collect(),
             generated_patterns: patterns_raw,
+            submodules: raw_submodules.iter().map(member_submodule).collect(),
         })
     }
 }
@@ -716,12 +773,14 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "untracked",
         "generated_patterns",
         "digest",
+        "submodules",
     ];
-    let fields: [(&str, &[&str]); 4] = [
+    let fields: [(&str, &[&str]); 5] = [
         ("tracked", &["path", "blob", "index_blobs"]),
         ("dirty", &["path", "kind"]),
         ("generated", &["path", "blob"]),
         ("untracked", &["path", "blob"]),
+        ("submodules", &["path", "index_commit", "head", "digest"]),
     ];
     let pairs = match data.as_object() {
         Some(pairs) => pairs,
@@ -777,6 +836,49 @@ fn member_generated(entry: &JsonValue) -> GeneratedFile {
 }
 
 /// Take an untracked member out of its payload entry shape.
+fn member_submodule(entry: &JsonValue) -> SubmoduleEntry {
+    SubmoduleEntry {
+        path: entry.get("path").expect("a payload entry stands").clone(),
+        index_commit: entry
+            .get("index_commit")
+            .expect("a payload entry stands")
+            .clone(),
+        head: entry.get("head").expect("a payload entry stands").clone(),
+        digest: entry.get("digest").expect("a payload entry stands").clone(),
+    }
+}
+
+/// Read the submodules member of a record into payload entry
+/// shape, with values as written, and whether the member
+/// stands in the record at all. The member stands absent as
+/// the empty list, and a record carrying it computes its
+/// digest over it exactly as written.
+fn read_raw_submodules(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("submodules") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !entry.is_object() {
+            return Err(decode());
+        }
+        let path = entry.get("path").cloned().ok_or_else(decode)?;
+        let index_commit = entry.get("index_commit").cloned().ok_or_else(decode)?;
+        let head = entry.get("head").cloned().ok_or_else(decode)?;
+        let digest = entry.get("digest").cloned().ok_or_else(decode)?;
+        out.push(JsonValue::object(vec![
+            ("path", path),
+            ("index_commit", index_commit),
+            ("head", head),
+            ("digest", digest),
+        ]));
+    }
+    Ok((out, true))
+}
+
 fn member_untracked(entry: &JsonValue) -> UntrackedFile {
     UntrackedFile {
         path: entry.get("path").expect("a payload entry stands").clone(),
@@ -1080,6 +1182,78 @@ const UNMERGED_CODES: [(char, char); 7] = [
 ];
 
 /// Compute the fingerprint of a working tree with git only.
+/// The gitlinks of a tree, the paths whose stage listing
+/// entries carry the submodule mode, each with the commit
+/// the index records for it.
+fn gitlinks(root: &Path) -> Result<Vec<(String, String)>, FinaltreeError> {
+    let listing = git_output(root, &["ls-files", "--stage", "-z"])?;
+    let mut out: Vec<(String, String)> = Vec::new();
+    for raw in listing.split(|byte| *byte == 0) {
+        if raw.is_empty() {
+            continue;
+        }
+        let (meta, raw_path) = match raw.iter().position(|byte| *byte == b'\t') {
+            Some(tab) => (&raw[..tab], &raw[tab + 1..]),
+            None => continue,
+        };
+        let fields: Vec<&[u8]> = meta.split(|byte| *byte == b' ').collect();
+        if fields.len() != 3 || fields[0] != b"160000" {
+            continue;
+        }
+        let commit = match std::str::from_utf8(fields[1]) {
+            Ok(text) if text.is_ascii() => text.to_string(),
+            _ => return Err(FinaltreeError::new("the index listing does not decode")),
+        };
+        let relative = require_utf8_path(raw_path)?;
+        if !out.iter().any(|(standing, _)| *standing == relative) {
+            out.push((relative, commit));
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
+/// The submodule entries of a tree, one per gitlink, under
+/// SUB-3. A submodule stands checked out where the directory
+/// at its path is itself the top level of a working tree,
+/// and its own fingerprint is computed standing there with
+/// no declared patterns, so the digest of the tree binds
+/// the state of every checkout below it.
+fn submodule_entries(root: &Path) -> Result<Vec<SubmoduleEntry>, FinaltreeError> {
+    let mut out = Vec::new();
+    for (relative, index_commit) in gitlinks(root)? {
+        let full = root.join(&relative);
+        let dot_git = std::fs::symlink_metadata(full.join(".git")).is_ok();
+        let checked_out = if dot_git {
+            let top = git_output(&full, &["rev-parse", "--show-toplevel"]).ok();
+            match top {
+                Some(bytes) => {
+                    let top_path =
+                        PathBuf::from(std::ffi::OsString::from_vec(bytes.trim_ascii().to_vec()));
+                    std::fs::canonicalize(&top_path).ok() == std::fs::canonicalize(&full).ok()
+                }
+                None => false,
+            }
+        } else {
+            false
+        };
+        let (head, digest) = if checked_out {
+            let head = git_text(&full, &["rev-parse", "HEAD"])?.trim().to_string();
+            let own = compute_fingerprint_tokens(&full, &[])?;
+            (JsonValue::text(head), JsonValue::text(own.digest()))
+        } else {
+            (JsonValue::Null, JsonValue::Null)
+        };
+        out.push(SubmoduleEntry {
+            path: JsonValue::text(relative),
+            index_commit: JsonValue::text(index_commit),
+            head,
+            digest,
+        });
+    }
+    Ok(out)
+}
+
 pub fn compute_fingerprint(
     root: &Path,
     generated_patterns: &[String],
@@ -1221,5 +1395,6 @@ pub fn compute_fingerprint_tokens(
             .iter()
             .map(|tokens| pattern_record(tokens))
             .collect(),
+        submodules: submodule_entries(root)?,
     })
 }
