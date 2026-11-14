@@ -198,7 +198,19 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
         let _ = sort_raw(&mut submodules, &["path"]);
         pairs.push(("submodules", JsonValue::List(submodules)));
     }
+    if !fingerprint.modes.is_empty() {
+        let mut modes: Vec<JsonValue> = fingerprint.modes.iter().map(mode_entry).collect();
+        let _ = sort_raw(&mut modes, &["path"]);
+        pairs.push(("modes", JsonValue::List(modes)));
+    }
     JsonValue::object(pairs)
+}
+
+fn mode_entry(entry: &ModeEntry) -> JsonValue {
+    JsonValue::object(vec![
+        ("path", entry.path.clone()),
+        ("mode", entry.mode.clone()),
+    ])
 }
 
 fn submodule_entry(entry: &SubmoduleEntry) -> JsonValue {
@@ -237,9 +249,10 @@ fn refuse_duplicate_raw(
     untracked: &[JsonValue],
     dirty: &[JsonValue],
     submodules: &[JsonValue],
+    modes: &[JsonValue],
 ) -> Result<(), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
-    for members in [tracked, generated, untracked, submodules] {
+    for members in [tracked, generated, untracked, submodules, modes] {
         let mut seen: Vec<&JsonValue> = Vec::new();
         for entry in members {
             let path = entry.get("path").ok_or_else(decode)?;
@@ -584,6 +597,7 @@ fn raw_payload(
     generated: &[JsonValue],
     untracked: &[JsonValue],
     submodules: Option<&[JsonValue]>,
+    modes: Option<&[JsonValue]>,
 ) -> Option<JsonValue> {
     let mut tracked = tracked.to_vec();
     sort_raw(&mut tracked, &["path"])?;
@@ -606,6 +620,11 @@ fn raw_payload(
         sort_raw(&mut submodules, &["path"])?;
         pairs.push(("submodules", JsonValue::List(submodules)));
     }
+    if let Some(modes) = modes {
+        let mut modes = modes.to_vec();
+        sort_raw(&mut modes, &["path"])?;
+        pairs.push(("modes", JsonValue::List(modes)));
+    }
     Some(JsonValue::object(pairs))
 }
 
@@ -618,6 +637,7 @@ pub struct Fingerprint {
     pub untracked: Vec<UntrackedFile>,
     pub generated_patterns: Vec<JsonValue>,
     pub submodules: Vec<SubmoduleEntry>,
+    pub modes: Vec<ModeEntry>,
 }
 
 /// One submodule of the tree, the commit the index records
@@ -631,6 +651,16 @@ pub struct SubmoduleEntry {
     pub index_commit: JsonValue,
     pub head: JsonValue,
     pub digest: JsonValue,
+}
+
+/// One file outside the index whose mode is not the plain
+/// standing, its path and its mode in the git tree spelling,
+/// 100755 for an executable regular file and 120000 for a
+/// symbolic link.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModeEntry {
+    pub path: JsonValue,
+    pub mode: JsonValue,
 }
 
 impl Fingerprint {
@@ -666,6 +696,7 @@ impl Fingerprint {
         let raw_generated = read_raw_members(data, "generated", true, false)?;
         let raw_untracked = read_raw_members(data, "untracked", false, false)?;
         let (raw_submodules, submodules_stand) = read_raw_submodules(data)?;
+        let (raw_modes, modes_stand) = read_raw_modes(data)?;
         let commit_raw = data.get("commit").cloned().ok_or_else(decode)?;
         let patterns_raw: Vec<JsonValue> = match data.get("generated_patterns") {
             None => Vec::new(),
@@ -677,6 +708,7 @@ impl Fingerprint {
             &raw_untracked,
             &raw_dirty,
             &raw_submodules,
+            &raw_modes,
         )?;
         let recorded = match data.get("digest") {
             None => {
@@ -703,6 +735,7 @@ impl Fingerprint {
             } else {
                 None
             },
+            if modes_stand { Some(&raw_modes) } else { None },
         )
         .ok_or_else(decode)?;
         // A lone surrogate standing in a value the digest
@@ -716,6 +749,7 @@ impl Fingerprint {
                 &raw_generated,
                 &raw_untracked,
                 &raw_submodules,
+                &raw_modes,
             ]
             .iter()
             .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
@@ -755,6 +789,7 @@ impl Fingerprint {
             untracked: raw_untracked.iter().map(member_untracked).collect(),
             generated_patterns: patterns_raw,
             submodules: raw_submodules.iter().map(member_submodule).collect(),
+            modes: raw_modes.iter().map(member_mode).collect(),
         })
     }
 }
@@ -774,13 +809,15 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "generated_patterns",
         "digest",
         "submodules",
+        "modes",
     ];
-    let fields: [(&str, &[&str]); 5] = [
+    let fields: [(&str, &[&str]); 6] = [
         ("tracked", &["path", "blob", "index_blobs"]),
         ("dirty", &["path", "kind"]),
         ("generated", &["path", "blob"]),
         ("untracked", &["path", "blob"]),
         ("submodules", &["path", "index_commit", "head", "digest"]),
+        ("modes", &["path", "mode"]),
     ];
     let pairs = match data.as_object() {
         Some(pairs) => pairs,
@@ -875,6 +912,46 @@ fn read_raw_submodules(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Final
             ("head", head),
             ("digest", digest),
         ]));
+    }
+    Ok((out, true))
+}
+
+/// Take a mode member out of its payload entry shape.
+fn member_mode(entry: &JsonValue) -> ModeEntry {
+    ModeEntry {
+        path: entry.get("path").expect("a payload entry stands").clone(),
+        mode: entry.get("mode").expect("a payload entry stands").clone(),
+    }
+}
+
+/// Read the modes member of a record into payload entry
+/// shape, with values as written, and whether the member
+/// stands in the record at all. The member stands absent as
+/// the empty list, a record carrying no such member reading
+/// as a tree whose untracked and generated files all stand
+/// at the plain standing. An entry naming a mode outside
+/// the standings the member names refuses in the decode
+/// family, as the slice states.
+fn read_raw_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("modes") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !entry.is_object() {
+            return Err(decode());
+        }
+        let path = entry.get("path").cloned().ok_or_else(decode)?;
+        let mode = entry.get("mode").cloned().ok_or_else(decode)?;
+        if mode != JsonValue::Text("100755".to_string())
+            && mode != JsonValue::Text("120000".to_string())
+        {
+            return Err(decode());
+        }
+        out.push(JsonValue::object(vec![("path", path), ("mode", mode)]));
     }
     Ok((out, true))
 }
@@ -1379,6 +1456,7 @@ pub fn compute_fingerprint_tokens(
         }
     }
     untracked.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
+    let modes = mode_entries(root, &generated, &untracked);
     Ok(Fingerprint {
         commit: JsonValue::text(commit),
         tracked,
@@ -1396,5 +1474,58 @@ pub fn compute_fingerprint_tokens(
             .map(|tokens| pattern_record(tokens))
             .collect(),
         submodules: submodule_entries(root)?,
+        modes,
     })
+}
+
+/// The mode standing of one file outside the index, in the
+/// git tree spelling, standing absent where the file stands
+/// at the plain standing. The link standing is read from
+/// the link itself and never through it, under the same
+/// reading that gathers the file's blob.
+fn mode_standing(root: &Path, relative: &str) -> Option<&'static str> {
+    let full = root.join(relative);
+    let meta = std::fs::symlink_metadata(&full).ok()?;
+    if meta.file_type().is_symlink() {
+        return Some("120000");
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if meta.is_file() && meta.permissions().mode() & 0o111 != 0 {
+            return Some("100755");
+        }
+    }
+    None
+}
+
+/// The mode entries of a tree, one for every untracked or
+/// generated file whose mode is not the plain standing,
+/// sorted by path, a path standing at most once however
+/// many of the fingerprint's lists name it.
+fn mode_entries(
+    root: &Path,
+    generated: &[GeneratedFile],
+    untracked: &[UntrackedFile],
+) -> Vec<ModeEntry> {
+    let mut seen: Vec<&str> = Vec::new();
+    let mut out = Vec::new();
+    for path in generated
+        .iter()
+        .map(|entry| as_text(&entry.path))
+        .chain(untracked.iter().map(|entry| as_text(&entry.path)))
+    {
+        if seen.contains(&path) {
+            continue;
+        }
+        seen.push(path);
+        if let Some(mode) = mode_standing(root, path) {
+            out.push(ModeEntry {
+                path: JsonValue::text(path),
+                mode: JsonValue::text(mode),
+            });
+        }
+    }
+    out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
+    out
 }

@@ -654,6 +654,37 @@ pub fn compare_fingerprints(
             (None, None) => unreachable!(),
         }
     }
+    let mode_of = |fingerprint: &Fingerprint, path: &JsonValue| -> JsonValue {
+        fingerprint
+            .modes
+            .iter()
+            .find(|entry| py_set_eq(&entry.path, path))
+            .map(|entry| entry.mode.clone())
+            .unwrap_or_else(|| JsonValue::text("100644"))
+    };
+    let mut mode_paths = union_paths(
+        expected_untracked
+            .iter()
+            .map(|(path, _)| *path)
+            .chain(expected_generated.iter().map(|(path, _)| *path)),
+        actual_untracked
+            .iter()
+            .map(|(path, _)| *path)
+            .chain(actual_generated.iter().map(|(path, _)| *path)),
+    );
+    sort_values(&mut mode_paths).ok_or_else(decode)?;
+    for path in &mode_paths {
+        let expected_stands = blob_lookup(&expected_untracked, path).is_some()
+            || blob_lookup(&expected_generated, path).is_some();
+        let actual_stands = blob_lookup(&actual_untracked, path).is_some()
+            || blob_lookup(&actual_generated, path).is_some();
+        if expected_stands
+            && actual_stands
+            && !py_set_eq(&mode_of(expected, path), &mode_of(actual, path))
+        {
+            differences.push(format!("file mode changed {}", py_str(path)));
+        }
+    }
     let mut submodule_paths: Vec<&JsonValue> = Vec::new();
     for entry in expected.submodules.iter().chain(actual.submodules.iter()) {
         if !submodule_paths
