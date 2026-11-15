@@ -221,6 +221,11 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
         let _ = sort_raw(&mut ignored, &["path"]);
         pairs.push(("ignored", JsonValue::List(ignored)));
     }
+    if !fingerprint.empty_dirs.is_empty() {
+        let mut empty_dirs = fingerprint.empty_dirs.clone();
+        empty_dirs.sort_by(|a, b| as_text(a).cmp(as_text(b)));
+        pairs.push(("empty_dirs", JsonValue::List(empty_dirs)));
+    }
     JsonValue::object(pairs)
 }
 
@@ -618,6 +623,7 @@ fn raw_payload(
     submodules: Option<&[JsonValue]>,
     modes: Option<&[JsonValue]>,
     ignored: Option<&[JsonValue]>,
+    empty_dirs: Option<&[JsonValue]>,
 ) -> Option<JsonValue> {
     let mut tracked = tracked.to_vec();
     sort_raw(&mut tracked, &["path"])?;
@@ -650,6 +656,11 @@ fn raw_payload(
         sort_raw(&mut ignored, &["path"])?;
         pairs.push(("ignored", JsonValue::List(ignored)));
     }
+    if let Some(empty_dirs) = empty_dirs {
+        let mut empty_dirs = empty_dirs.to_vec();
+        empty_dirs.sort_by(|a, b| as_text(a).cmp(as_text(b)));
+        pairs.push(("empty_dirs", JsonValue::List(empty_dirs)));
+    }
     Some(JsonValue::object(pairs))
 }
 
@@ -664,6 +675,7 @@ pub struct Fingerprint {
     pub submodules: Vec<SubmoduleEntry>,
     pub modes: Vec<ModeEntry>,
     pub ignored: Vec<IgnoredFile>,
+    pub empty_dirs: Vec<JsonValue>,
 }
 
 /// One submodule of the tree, the commit the index records
@@ -724,6 +736,7 @@ impl Fingerprint {
         let (raw_submodules, submodules_stand) = read_raw_submodules(data)?;
         let (raw_modes, modes_stand) = read_raw_modes(data)?;
         let (raw_ignored, ignored_stand) = read_raw_ignored(data)?;
+        let (raw_empty_dirs, empty_dirs_stand) = read_raw_empty_dirs(data)?;
         let commit_raw = data.get("commit").cloned().ok_or_else(decode)?;
         let patterns_raw: Vec<JsonValue> = match data.get("generated_patterns") {
             None => Vec::new(),
@@ -738,6 +751,7 @@ impl Fingerprint {
             &raw_modes,
             &raw_ignored,
         )?;
+        refuse_duplicate_empty_dirs(&raw_empty_dirs)?;
         let recorded = match data.get("digest") {
             None => {
                 return Err(FinaltreeError::new(
@@ -769,6 +783,11 @@ impl Fingerprint {
             } else {
                 None
             },
+            if empty_dirs_stand {
+                Some(&raw_empty_dirs)
+            } else {
+                None
+            },
         )
         .ok_or_else(decode)?;
         // A lone surrogate standing in a value the digest
@@ -784,6 +803,7 @@ impl Fingerprint {
                 &raw_submodules,
                 &raw_modes,
                 &raw_ignored,
+                &raw_empty_dirs,
             ]
             .iter()
             .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
@@ -825,6 +845,7 @@ impl Fingerprint {
             submodules: raw_submodules.iter().map(member_submodule).collect(),
             modes: raw_modes.iter().map(member_mode).collect(),
             ignored: raw_ignored.iter().map(member_ignored).collect(),
+            empty_dirs: raw_empty_dirs,
         })
     }
 }
@@ -846,6 +867,7 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "submodules",
         "modes",
         "ignored",
+        "empty_dirs",
     ];
     let fields: [(&str, &[&str]); 7] = [
         ("tracked", &["path", "blob", "index_blobs"]),
@@ -1014,6 +1036,46 @@ fn read_raw_ignored(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Finaltre
         out.push(JsonValue::object(vec![("path", path), ("blob", blob)]));
     }
     Ok((out, true))
+}
+
+/// Take the empty_dirs member out of a record in its raw
+/// payload entry shape. The member stands as a list of path
+/// strings, and an entry that does not decode as a path
+/// string refuses in the decode family (ED-4). A record
+/// carrying no empty_dirs member reads as a tree holding no
+/// empty directory.
+fn read_raw_empty_dirs(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("empty_dirs") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !matches!(entry, JsonValue::Text(_)) {
+            return Err(decode());
+        }
+        out.push(entry.clone());
+    }
+    Ok((out, true))
+}
+
+/// The FIX-7 duplicate member refusal over the empty_dirs
+/// member, whose entries stand as the paths themselves,
+/// compared under the equality the Python set building
+/// applies (ED-4).
+fn refuse_duplicate_empty_dirs(empty_dirs: &[JsonValue]) -> Result<(), FinaltreeError> {
+    let mut seen: Vec<&JsonValue> = Vec::new();
+    for entry in empty_dirs {
+        if seen.iter().any(|standing| py_set_eq(standing, entry)) {
+            return Err(FinaltreeError::new(
+                "the fingerprint record carries the same member twice",
+            ));
+        }
+        seen.push(entry);
+    }
+    Ok(())
 }
 
 fn member_ignored(entry: &JsonValue) -> IgnoredFile {
@@ -1525,6 +1587,7 @@ pub fn compute_fingerprint_tokens(
     untracked.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     let ignored = ignored_files(root, &generated_paths)?;
     let modes = mode_entries(root, &generated, &untracked, &ignored);
+    let empty_dirs = empty_directories(root)?;
     Ok(Fingerprint {
         commit: JsonValue::text(commit),
         tracked,
@@ -1544,7 +1607,92 @@ pub fn compute_fingerprint_tokens(
         submodules: submodule_entries(root)?,
         modes,
         ignored,
+        empty_dirs,
     })
+}
+
+/// The empty directories of a tree, every directory standing
+/// under the root whose subtree holds no entry that is not
+/// itself a directory, as relative path texts sorted by path
+/// (ED-2 and ED-3). The reading is the filesystem walk of the
+/// tree itself, the git reading naming no directory standing
+/// empty. The walk never enters the .git folder and never
+/// enters the interior of a submodule's checkout, a directory
+/// standing at a gitlink path standing named nowhere in this
+/// member, and the ignore rules reach no part of it.
+fn empty_directories(root: &Path) -> Result<Vec<JsonValue>, FinaltreeError> {
+    let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
+        .into_iter()
+        .map(|(relative, _)| relative)
+        .collect();
+    let mut directories: Vec<String> = Vec::new();
+    let mut holds_entry: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    gather_directories(root, root, &gitlinks, &mut directories, &mut holds_entry)?;
+    let mut out: Vec<JsonValue> = directories
+        .into_iter()
+        .filter(|relative| !holds_entry.contains(relative))
+        .map(JsonValue::text)
+        .collect();
+    out.sort_by(|a, b| as_text(a).cmp(as_text(b)));
+    Ok(out)
+}
+
+fn gather_directories(
+    root: &Path,
+    dir: &Path,
+    gitlinks: &std::collections::BTreeSet<String>,
+    directories: &mut Vec<String>,
+    holds_entry: &mut std::collections::BTreeSet<String>,
+) -> Result<(), FinaltreeError> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return Ok(()),
+    };
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        if entry.file_name() == ".git" {
+            continue;
+        }
+        let file_type = match entry.file_type() {
+            Ok(kind) => kind,
+            Err(_) => continue,
+        };
+        let full = entry.path();
+        let stripped = match full.strip_prefix(root) {
+            Ok(stripped) => stripped,
+            Err(_) => continue,
+        };
+        #[cfg(unix)]
+        let relative_bytes = {
+            use std::os::unix::ffi::OsStrExt;
+            stripped.as_os_str().as_bytes().to_vec()
+        };
+        #[cfg(not(unix))]
+        let relative_bytes = stripped.to_string_lossy().into_owned().into_bytes();
+        let relative = require_utf8_path(&relative_bytes)?;
+        if file_type.is_dir() {
+            // A directory standing as itself. A gitlink path is
+            // neither named nor descended into, its interior
+            // standing in the submodule's own fingerprint.
+            if gitlinks.contains(&relative) {
+                continue;
+            }
+            directories.push(relative);
+            gather_directories(root, &full, gitlinks, directories, holds_entry)?;
+        } else {
+            // An entry that is not a directory standing as
+            // itself, a file or a link of any standing. Every
+            // directory above it holds an entry beneath it.
+            let mut ancestor = Path::new(&relative).parent();
+            while let Some(path) = ancestor {
+                if path.as_os_str().is_empty() {
+                    break;
+                }
+                holds_entry.insert(path.to_string_lossy().into_owned());
+                ancestor = path.parent();
+            }
+        }
+    }
+    Ok(())
 }
 
 /// The ignored files of a tree, every file the git ignore
