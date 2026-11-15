@@ -55,6 +55,12 @@ pub struct UntrackedFile {
     pub blob: JsonValue,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct IgnoredFile {
+    pub path: JsonValue,
+    pub blob: JsonValue,
+}
+
 /// The display spelling of a path as the Python path reading
 /// spells it in messages, with redundant separators collapsed,
 /// a trailing separator dropped, and a leading current
@@ -169,6 +175,13 @@ fn untracked_entry(entry: &UntrackedFile) -> JsonValue {
     ])
 }
 
+fn ignored_entry(entry: &IgnoredFile) -> JsonValue {
+    JsonValue::object(vec![
+        ("path", entry.path.clone()),
+        ("blob", entry.blob.clone()),
+    ])
+}
+
 /// The member record both the digest and the emitted dict
 /// shape, with member lists sorted under the Python ordering
 /// of the values as they stand. A computed fingerprint holds
@@ -202,6 +215,11 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
         let mut modes: Vec<JsonValue> = fingerprint.modes.iter().map(mode_entry).collect();
         let _ = sort_raw(&mut modes, &["path"]);
         pairs.push(("modes", JsonValue::List(modes)));
+    }
+    if !fingerprint.ignored.is_empty() {
+        let mut ignored: Vec<JsonValue> = fingerprint.ignored.iter().map(ignored_entry).collect();
+        let _ = sort_raw(&mut ignored, &["path"]);
+        pairs.push(("ignored", JsonValue::List(ignored)));
     }
     JsonValue::object(pairs)
 }
@@ -250,9 +268,10 @@ fn refuse_duplicate_raw(
     dirty: &[JsonValue],
     submodules: &[JsonValue],
     modes: &[JsonValue],
+    ignored: &[JsonValue],
 ) -> Result<(), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
-    for members in [tracked, generated, untracked, submodules, modes] {
+    for members in [tracked, generated, untracked, submodules, modes, ignored] {
         let mut seen: Vec<&JsonValue> = Vec::new();
         for entry in members {
             let path = entry.get("path").ok_or_else(decode)?;
@@ -598,6 +617,7 @@ fn raw_payload(
     untracked: &[JsonValue],
     submodules: Option<&[JsonValue]>,
     modes: Option<&[JsonValue]>,
+    ignored: Option<&[JsonValue]>,
 ) -> Option<JsonValue> {
     let mut tracked = tracked.to_vec();
     sort_raw(&mut tracked, &["path"])?;
@@ -625,6 +645,11 @@ fn raw_payload(
         sort_raw(&mut modes, &["path"])?;
         pairs.push(("modes", JsonValue::List(modes)));
     }
+    if let Some(ignored) = ignored {
+        let mut ignored = ignored.to_vec();
+        sort_raw(&mut ignored, &["path"])?;
+        pairs.push(("ignored", JsonValue::List(ignored)));
+    }
     Some(JsonValue::object(pairs))
 }
 
@@ -638,6 +663,7 @@ pub struct Fingerprint {
     pub generated_patterns: Vec<JsonValue>,
     pub submodules: Vec<SubmoduleEntry>,
     pub modes: Vec<ModeEntry>,
+    pub ignored: Vec<IgnoredFile>,
 }
 
 /// One submodule of the tree, the commit the index records
@@ -697,6 +723,7 @@ impl Fingerprint {
         let raw_untracked = read_raw_members(data, "untracked", false, false)?;
         let (raw_submodules, submodules_stand) = read_raw_submodules(data)?;
         let (raw_modes, modes_stand) = read_raw_modes(data)?;
+        let (raw_ignored, ignored_stand) = read_raw_ignored(data)?;
         let commit_raw = data.get("commit").cloned().ok_or_else(decode)?;
         let patterns_raw: Vec<JsonValue> = match data.get("generated_patterns") {
             None => Vec::new(),
@@ -709,6 +736,7 @@ impl Fingerprint {
             &raw_dirty,
             &raw_submodules,
             &raw_modes,
+            &raw_ignored,
         )?;
         let recorded = match data.get("digest") {
             None => {
@@ -736,6 +764,11 @@ impl Fingerprint {
                 None
             },
             if modes_stand { Some(&raw_modes) } else { None },
+            if ignored_stand {
+                Some(&raw_ignored)
+            } else {
+                None
+            },
         )
         .ok_or_else(decode)?;
         // A lone surrogate standing in a value the digest
@@ -750,6 +783,7 @@ impl Fingerprint {
                 &raw_untracked,
                 &raw_submodules,
                 &raw_modes,
+                &raw_ignored,
             ]
             .iter()
             .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
@@ -790,6 +824,7 @@ impl Fingerprint {
             generated_patterns: patterns_raw,
             submodules: raw_submodules.iter().map(member_submodule).collect(),
             modes: raw_modes.iter().map(member_mode).collect(),
+            ignored: raw_ignored.iter().map(member_ignored).collect(),
         })
     }
 }
@@ -810,14 +845,16 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "digest",
         "submodules",
         "modes",
+        "ignored",
     ];
-    let fields: [(&str, &[&str]); 6] = [
+    let fields: [(&str, &[&str]); 7] = [
         ("tracked", &["path", "blob", "index_blobs"]),
         ("dirty", &["path", "kind"]),
         ("generated", &["path", "blob"]),
         ("untracked", &["path", "blob"]),
         ("submodules", &["path", "index_commit", "head", "digest"]),
         ("modes", &["path", "mode"]),
+        ("ignored", &["path", "blob"]),
     ];
     let pairs = match data.as_object() {
         Some(pairs) => pairs,
@@ -954,6 +991,36 @@ fn read_raw_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeE
         out.push(JsonValue::object(vec![("path", path), ("mode", mode)]));
     }
     Ok((out, true))
+}
+
+/// Take the ignored member out of a record in its raw
+/// payload entry shape, on the standing of the modes member
+/// reading. A record carrying no ignored member reads as a
+/// tree holding no ignored file (IGN-4).
+fn read_raw_ignored(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("ignored") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !entry.is_object() {
+            return Err(decode());
+        }
+        let path = entry.get("path").cloned().ok_or_else(decode)?;
+        let blob = entry.get("blob").cloned().ok_or_else(decode)?;
+        out.push(JsonValue::object(vec![("path", path), ("blob", blob)]));
+    }
+    Ok((out, true))
+}
+
+fn member_ignored(entry: &JsonValue) -> IgnoredFile {
+    IgnoredFile {
+        path: entry.get("path").expect("a payload entry stands").clone(),
+        blob: entry.get("blob").expect("a payload entry stands").clone(),
+    }
 }
 
 fn member_untracked(entry: &JsonValue) -> UntrackedFile {
@@ -1456,7 +1523,8 @@ pub fn compute_fingerprint_tokens(
         }
     }
     untracked.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
-    let modes = mode_entries(root, &generated, &untracked);
+    let ignored = ignored_files(root, &generated_paths)?;
+    let modes = mode_entries(root, &generated, &untracked, &ignored);
     Ok(Fingerprint {
         commit: JsonValue::text(commit),
         tracked,
@@ -1475,7 +1543,49 @@ pub fn compute_fingerprint_tokens(
             .collect(),
         submodules: submodule_entries(root)?,
         modes,
+        ignored,
     })
+}
+
+/// The ignored files of a tree, every file the git ignore
+/// reading sets aside standing in neither the generated nor
+/// the untracked member, each with the hash of its content
+/// under the standing blob reading, sorted by path (IGN-3).
+/// The reading names every file on its own line, an ignored
+/// directory never standing collapsed over the files below
+/// it, and the rules it applies are the tree's ignore files
+/// and the repository's own exclude file and the reader's
+/// global exclude file alike.
+fn ignored_files(
+    root: &Path,
+    generated_paths: &std::collections::BTreeSet<&str>,
+) -> Result<Vec<IgnoredFile>, FinaltreeError> {
+    let listing = git_output(
+        root,
+        &[
+            "ls-files",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+            "-z",
+        ],
+    )?;
+    let mut out = Vec::new();
+    for raw in listing.split(|byte| *byte == 0) {
+        if raw.is_empty() {
+            continue;
+        }
+        let relative = require_utf8_path(raw)?;
+        if generated_paths.contains(relative.as_str()) {
+            continue;
+        }
+        out.push(IgnoredFile {
+            path: JsonValue::text(relative.clone()),
+            blob: blob_value(content_blob(root, &relative)?),
+        });
+    }
+    out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
+    Ok(out)
 }
 
 /// The mode standing of one file outside the index, in the
@@ -1507,6 +1617,7 @@ fn mode_entries(
     root: &Path,
     generated: &[GeneratedFile],
     untracked: &[UntrackedFile],
+    ignored: &[IgnoredFile],
 ) -> Vec<ModeEntry> {
     let mut seen: Vec<&str> = Vec::new();
     let mut out = Vec::new();
@@ -1514,6 +1625,7 @@ fn mode_entries(
         .iter()
         .map(|entry| as_text(&entry.path))
         .chain(untracked.iter().map(|entry| as_text(&entry.path)))
+        .chain(ignored.iter().map(|entry| as_text(&entry.path)))
     {
         if seen.contains(&path) {
             continue;
