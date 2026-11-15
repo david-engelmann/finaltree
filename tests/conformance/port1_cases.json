@@ -6935,7 +6935,8 @@
   {
    "answer": {
     "differences": [
-     "generated artifact removed dist/out.bin"
+     "generated artifact removed dist/out.bin",
+     "empty directory added dist"
     ],
     "matched": false
    },

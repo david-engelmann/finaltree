@@ -694,6 +694,30 @@ pub fn compare_fingerprints(
             (None, None) => unreachable!(),
         }
     }
+    let expected_empty_dirs: Vec<&JsonValue> = expected.empty_dirs.iter().collect();
+    let actual_empty_dirs: Vec<&JsonValue> = actual.empty_dirs.iter().collect();
+    let mut empty_dir_paths = union_paths(
+        expected_empty_dirs.iter().copied(),
+        actual_empty_dirs.iter().copied(),
+    );
+    sort_values(&mut empty_dir_paths).ok_or_else(decode)?;
+    for path in &empty_dir_paths {
+        let expected_stands = expected_empty_dirs
+            .iter()
+            .any(|standing| py_set_eq(standing, path));
+        let actual_stands = actual_empty_dirs
+            .iter()
+            .any(|standing| py_set_eq(standing, path));
+        match (expected_stands, actual_stands) {
+            (true, false) => {
+                differences.push(format!("empty directory removed {}", py_str(path)));
+            }
+            (false, true) => {
+                differences.push(format!("empty directory added {}", py_str(path)));
+            }
+            _ => {}
+        }
+    }
     let mode_of = |fingerprint: &Fingerprint, path: &JsonValue| -> JsonValue {
         fingerprint
             .modes
