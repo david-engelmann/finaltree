@@ -13,7 +13,7 @@ use std::process::{Command, Stdio};
 use crate::errors::FinaltreeError;
 use crate::fingerprint::{
     compute_fingerprint_tokens, display_path, py_set_eq, sort_pairs, sort_values, DirtyFile,
-    Fingerprint, GeneratedFile, TrackedFile, UntrackedFile,
+    Fingerprint, GeneratedFile, IgnoredFile, TrackedFile, UntrackedFile,
 };
 use crate::intparse::{parse_python_int, py_is_space};
 use crate::jsonvalue::{parse_json, parse_json_lenient, JsonValue};
@@ -432,6 +432,20 @@ fn group_generated<'a>(entries: &'a [GeneratedFile]) -> Vec<(&'a JsonValue, &'a 
     groups
 }
 
+fn group_ignored<'a>(entries: &'a [IgnoredFile]) -> Vec<(&'a JsonValue, &'a JsonValue)> {
+    let mut groups: Vec<(&JsonValue, &JsonValue)> = Vec::new();
+    for entry in entries {
+        match groups
+            .iter_mut()
+            .find(|(path, _)| py_set_eq(path, &entry.path))
+        {
+            Some((_, blob)) => *blob = &entry.blob,
+            None => groups.push((&entry.path, &entry.blob)),
+        }
+    }
+    groups
+}
+
 fn group_untracked<'a>(entries: &'a [UntrackedFile]) -> Vec<(&'a JsonValue, &'a JsonValue)> {
     let mut groups: Vec<(&JsonValue, &JsonValue)> = Vec::new();
     for entry in entries {
@@ -649,6 +663,32 @@ pub fn compare_fingerprints(
             (Some(expected_blob), Some(actual_blob)) => {
                 if expected_blob != actual_blob {
                     differences.push(format!("generated artifact differs {}", py_str(path)));
+                }
+            }
+            (None, None) => unreachable!(),
+        }
+    }
+    let expected_ignored = group_ignored(&expected.ignored);
+    let actual_ignored = group_ignored(&actual.ignored);
+    let ignored_paths = union_paths(
+        expected_ignored.iter().map(|(path, _)| *path),
+        actual_ignored.iter().map(|(path, _)| *path),
+    );
+    let mut ignored_sorted = ignored_paths.clone();
+    sort_values(&mut ignored_sorted).ok_or_else(decode)?;
+    for path in &ignored_sorted {
+        let expected_blob = blob_lookup(&expected_ignored, path);
+        let actual_blob = blob_lookup(&actual_ignored, path);
+        match (expected_blob, actual_blob) {
+            (Some(_), None) => {
+                differences.push(format!("ignored file removed {}", py_str(path)));
+            }
+            (None, Some(_)) => {
+                differences.push(format!("ignored file added {}", py_str(path)));
+            }
+            (Some(expected_blob), Some(actual_blob)) => {
+                if expected_blob != actual_blob {
+                    differences.push(format!("ignored content changed {}", py_str(path)));
                 }
             }
             (None, None) => unreachable!(),
