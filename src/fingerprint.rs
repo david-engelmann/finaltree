@@ -237,6 +237,12 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
         let _ = sort_raw(&mut special, &["path"]);
         pairs.push(("special", JsonValue::List(special)));
     }
+    if !fingerprint.dir_modes.is_empty() {
+        let mut dir_modes: Vec<JsonValue> =
+            fingerprint.dir_modes.iter().map(dir_mode_entry).collect();
+        let _ = sort_raw(&mut dir_modes, &["path"]);
+        pairs.push(("dir_modes", JsonValue::List(dir_modes)));
+    }
     JsonValue::object(pairs)
 }
 
@@ -248,6 +254,13 @@ fn special_entry(entry: &SpecialFile) -> JsonValue {
 }
 
 fn mode_entry(entry: &ModeEntry) -> JsonValue {
+    JsonValue::object(vec![
+        ("path", entry.path.clone()),
+        ("mode", entry.mode.clone()),
+    ])
+}
+
+fn dir_mode_entry(entry: &DirModeEntry) -> JsonValue {
     JsonValue::object(vec![
         ("path", entry.path.clone()),
         ("mode", entry.mode.clone()),
@@ -285,7 +298,7 @@ pub(crate) fn py_set_eq(a: &JsonValue, b: &JsonValue) -> bool {
 /// stops that reading uncaught, and the port refuses it in
 /// the decode family.
 fn refuse_duplicate_raw(
-    path_members: [&[JsonValue]; 7],
+    path_members: [&[JsonValue]; 8],
     dirty: &[JsonValue],
 ) -> Result<(), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
@@ -638,6 +651,7 @@ fn raw_payload(
     ignored: Option<&[JsonValue]>,
     empty_dirs: Option<&[JsonValue]>,
     special: Option<&[JsonValue]>,
+    dir_modes: Option<&[JsonValue]>,
 ) -> Option<JsonValue> {
     let mut tracked = tracked.to_vec();
     sort_raw(&mut tracked, &["path"])?;
@@ -680,6 +694,11 @@ fn raw_payload(
         sort_raw(&mut special, &["path"])?;
         pairs.push(("special", JsonValue::List(special)));
     }
+    if let Some(dir_modes) = dir_modes {
+        let mut dir_modes = dir_modes.to_vec();
+        sort_raw(&mut dir_modes, &["path"])?;
+        pairs.push(("dir_modes", JsonValue::List(dir_modes)));
+    }
     Some(JsonValue::object(pairs))
 }
 
@@ -696,6 +715,7 @@ pub struct Fingerprint {
     pub ignored: Vec<IgnoredFile>,
     pub empty_dirs: Vec<JsonValue>,
     pub special: Vec<SpecialFile>,
+    pub dir_modes: Vec<DirModeEntry>,
 }
 
 /// One submodule of the tree, the commit the index records
@@ -717,6 +737,16 @@ pub struct SubmoduleEntry {
 /// symbolic link.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModeEntry {
+    pub path: JsonValue,
+    pub mode: JsonValue,
+}
+
+/// One directory whose mode stands outside the plain
+/// family, its path and its mode spelled in octal over its
+/// permission and special bits, at three digits where those
+/// bits fit three and at four where a special bit stands.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DirModeEntry {
     pub path: JsonValue,
     pub mode: JsonValue,
 }
@@ -758,6 +788,7 @@ impl Fingerprint {
         let (raw_ignored, ignored_stand) = read_raw_ignored(data)?;
         let (raw_empty_dirs, empty_dirs_stand) = read_raw_empty_dirs(data)?;
         let (raw_special, special_stand) = read_raw_special(data)?;
+        let (raw_dir_modes, dir_modes_stand) = read_raw_dir_modes(data)?;
         let commit_raw = data.get("commit").cloned().ok_or_else(decode)?;
         let patterns_raw: Vec<JsonValue> = match data.get("generated_patterns") {
             None => Vec::new(),
@@ -772,6 +803,7 @@ impl Fingerprint {
                 &raw_modes,
                 &raw_ignored,
                 &raw_special,
+                &raw_dir_modes,
             ],
             &raw_dirty,
         )?;
@@ -817,6 +849,11 @@ impl Fingerprint {
             } else {
                 None
             },
+            if dir_modes_stand {
+                Some(&raw_dir_modes)
+            } else {
+                None
+            },
         )
         .ok_or_else(decode)?;
         // A lone surrogate standing in a value the digest
@@ -834,6 +871,7 @@ impl Fingerprint {
                 &raw_ignored,
                 &raw_empty_dirs,
                 &raw_special,
+                &raw_dir_modes,
             ]
             .iter()
             .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
@@ -877,6 +915,7 @@ impl Fingerprint {
             ignored: raw_ignored.iter().map(member_ignored).collect(),
             empty_dirs: raw_empty_dirs,
             special: raw_special.iter().map(member_special).collect(),
+            dir_modes: raw_dir_modes.iter().map(member_dir_mode).collect(),
         })
     }
 }
@@ -900,8 +939,9 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "ignored",
         "empty_dirs",
         "special",
+        "dir_modes",
     ];
-    let fields: [(&str, &[&str]); 8] = [
+    let fields: [(&str, &[&str]); 9] = [
         ("tracked", &["path", "blob", "index_blobs"]),
         ("dirty", &["path", "kind"]),
         ("generated", &["path", "blob"]),
@@ -910,6 +950,7 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         ("modes", &["path", "mode"]),
         ("ignored", &["path", "blob"]),
         ("special", &["path", "kind"]),
+        ("dir_modes", &["path", "mode"]),
     ];
     let pairs = match data.as_object() {
         Some(pairs) => pairs,
@@ -1124,6 +1165,52 @@ fn read_raw_special(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Finaltre
         let path = entry.get("path").cloned().ok_or_else(decode)?;
         let kind = entry.get("kind").cloned().ok_or_else(decode)?;
         out.push(JsonValue::object(vec![("path", path), ("kind", kind)]));
+    }
+    Ok((out, true))
+}
+
+/// Take a dir_modes member out of its payload entry shape.
+fn member_dir_mode(entry: &JsonValue) -> DirModeEntry {
+    DirModeEntry {
+        path: entry.get("path").expect("a payload entry stands").clone(),
+        mode: entry.get("mode").expect("a payload entry stands").clone(),
+    }
+}
+
+/// Read the dir_modes member of a record into payload entry
+/// shape, with values as written, and whether the member
+/// stands in the record at all. The member stands absent as
+/// the empty list, a record carrying no such member reading
+/// as a tree whose directories all stand inside the plain
+/// family (DM-4). An entry that does not decode as an object
+/// carrying a path and a mode refuses in the decode family,
+/// and a mode standing inside the plain family or spelled
+/// otherwise than DM-2 spells it refuses in the decode
+/// family with it, the computation never writing one.
+fn read_raw_dir_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("dir_modes") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !entry.is_object() {
+            return Err(decode());
+        }
+        let path = entry.get("path").cloned().ok_or_else(decode)?;
+        let mode = entry.get("mode").cloned().ok_or_else(decode)?;
+        let JsonValue::Text(spelling) = &mode else {
+            return Err(decode());
+        };
+        let Some(bits) = parse_dir_mode(spelling) else {
+            return Err(decode());
+        };
+        if plain_dir_mode(bits) || spell_dir_mode(bits) != *spelling {
+            return Err(decode());
+        }
+        out.push(JsonValue::object(vec![("path", path), ("mode", mode)]));
     }
     Ok((out, true))
 }
@@ -1666,6 +1753,7 @@ pub fn compute_fingerprint_tokens(
     let modes = mode_entries(root, &generated, &untracked, &ignored);
     let empty_dirs = empty_directories(root)?;
     let special = special_files(root)?;
+    let dir_modes = directory_modes(root)?;
     Ok(Fingerprint {
         commit: JsonValue::text(commit),
         tracked,
@@ -1687,6 +1775,7 @@ pub fn compute_fingerprint_tokens(
         ignored,
         empty_dirs,
         special,
+        dir_modes,
     })
 }
 
@@ -1770,6 +1859,121 @@ fn gather_directories(
                 ancestor = path.parent();
             }
         }
+    }
+    Ok(())
+}
+
+/// The plain family of directory modes, the standings the
+/// common umasks 022 and 002 and 027 and 077 and 007 supply
+/// from the full standing (DM-1, as the build amendment to
+/// this slice widens it). A directory standing at one of
+/// these modes stands in no member, so two checkouts of one
+/// tree under different common umasks stamp as one.
+const PLAIN_DIR_MODES: [u32; 5] = [0o755, 0o775, 0o750, 0o700, 0o770];
+
+fn plain_dir_mode(bits: u32) -> bool {
+    PLAIN_DIR_MODES.contains(&bits)
+}
+
+/// The octal spelling of a directory mode over its
+/// permission and special bits, at three digits where those
+/// bits fit three and at four where a special bit stands
+/// (DM-2).
+fn spell_dir_mode(bits: u32) -> String {
+    if bits > 0o777 {
+        format!("{bits:o}")
+    } else {
+        format!("{bits:03o}")
+    }
+}
+
+/// Read a directory mode spelling back to its bits, refusing
+/// any spelling DM-2 does not name.
+fn parse_dir_mode(spelling: &str) -> Option<u32> {
+    if !(spelling.len() == 3 || spelling.len() == 4) {
+        return None;
+    }
+    if !spelling.bytes().all(|byte| (b'0'..=b'7').contains(&byte)) {
+        return None;
+    }
+    u32::from_str_radix(spelling, 8).ok()
+}
+
+/// The directory modes of a tree standing outside the plain
+/// family, each with its octal spelling, sorted by path
+/// (DM-2 and DM-3). The reading is the filesystem walk of
+/// the tree itself in the form the sixth slice's walk
+/// takes, the git reading naming no directory mode. The
+/// walk never enters the .git folder and never enters the
+/// interior of a submodule's checkout, a submodule's
+/// checkout directory standing in the walk as a directory
+/// standing to be read and not entered, and the ignore
+/// rules reach no part of it.
+fn directory_modes(root: &Path) -> Result<Vec<DirModeEntry>, FinaltreeError> {
+    let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
+        .into_iter()
+        .map(|(relative, _)| relative)
+        .collect();
+    let mut out = Vec::new();
+    gather_dir_modes(root, root, &gitlinks, &mut out)?;
+    out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
+    Ok(out)
+}
+
+fn gather_dir_modes(
+    root: &Path,
+    dir: &Path,
+    gitlinks: &std::collections::BTreeSet<String>,
+    out: &mut Vec<DirModeEntry>,
+) -> Result<(), FinaltreeError> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return Ok(()),
+    };
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        if entry.file_name() == ".git" {
+            continue;
+        }
+        let file_type = match entry.file_type() {
+            Ok(kind) => kind,
+            Err(_) => continue,
+        };
+        if !file_type.is_dir() {
+            continue;
+        }
+        let full = entry.path();
+        let stripped = match full.strip_prefix(root) {
+            Ok(stripped) => stripped,
+            Err(_) => continue,
+        };
+        #[cfg(unix)]
+        let relative_bytes = {
+            use std::os::unix::ffi::OsStrExt;
+            stripped.as_os_str().as_bytes().to_vec()
+        };
+        #[cfg(not(unix))]
+        let relative_bytes = stripped.to_string_lossy().into_owned().into_bytes();
+        let relative = require_utf8_path(&relative_bytes)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = std::fs::symlink_metadata(&full) {
+                let bits = meta.permissions().mode() & 0o7777;
+                if !plain_dir_mode(bits) {
+                    out.push(DirModeEntry {
+                        path: JsonValue::text(relative.clone()),
+                        mode: JsonValue::text(spell_dir_mode(bits)),
+                    });
+                }
+            }
+        }
+        // A gitlink path is never descended into, its interior
+        // standing in the submodule's own fingerprint. Its own
+        // mode stands recorded above, in the parent's record.
+        if gitlinks.contains(&relative) {
+            continue;
+        }
+        gather_dir_modes(root, &full, gitlinks, out)?;
     }
     Ok(())
 }
