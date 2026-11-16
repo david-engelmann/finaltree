@@ -61,6 +61,12 @@ pub struct IgnoredFile {
     pub blob: JsonValue,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpecialFile {
+    pub path: JsonValue,
+    pub kind: JsonValue,
+}
+
 /// The display spelling of a path as the Python path reading
 /// spells it in messages, with redundant separators collapsed,
 /// a trailing separator dropped, and a leading current
@@ -226,7 +232,19 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
         empty_dirs.sort_by(|a, b| as_text(a).cmp(as_text(b)));
         pairs.push(("empty_dirs", JsonValue::List(empty_dirs)));
     }
+    if !fingerprint.special.is_empty() {
+        let mut special: Vec<JsonValue> = fingerprint.special.iter().map(special_entry).collect();
+        let _ = sort_raw(&mut special, &["path"]);
+        pairs.push(("special", JsonValue::List(special)));
+    }
     JsonValue::object(pairs)
+}
+
+fn special_entry(entry: &SpecialFile) -> JsonValue {
+    JsonValue::object(vec![
+        ("path", entry.path.clone()),
+        ("kind", entry.kind.clone()),
+    ])
 }
 
 fn mode_entry(entry: &ModeEntry) -> JsonValue {
@@ -267,16 +285,11 @@ pub(crate) fn py_set_eq(a: &JsonValue, b: &JsonValue) -> bool {
 /// stops that reading uncaught, and the port refuses it in
 /// the decode family.
 fn refuse_duplicate_raw(
-    tracked: &[JsonValue],
-    generated: &[JsonValue],
-    untracked: &[JsonValue],
+    path_members: [&[JsonValue]; 7],
     dirty: &[JsonValue],
-    submodules: &[JsonValue],
-    modes: &[JsonValue],
-    ignored: &[JsonValue],
 ) -> Result<(), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
-    for members in [tracked, generated, untracked, submodules, modes, ignored] {
+    for members in path_members {
         let mut seen: Vec<&JsonValue> = Vec::new();
         for entry in members {
             let path = entry.get("path").ok_or_else(decode)?;
@@ -624,6 +637,7 @@ fn raw_payload(
     modes: Option<&[JsonValue]>,
     ignored: Option<&[JsonValue]>,
     empty_dirs: Option<&[JsonValue]>,
+    special: Option<&[JsonValue]>,
 ) -> Option<JsonValue> {
     let mut tracked = tracked.to_vec();
     sort_raw(&mut tracked, &["path"])?;
@@ -661,6 +675,11 @@ fn raw_payload(
         empty_dirs.sort_by(|a, b| as_text(a).cmp(as_text(b)));
         pairs.push(("empty_dirs", JsonValue::List(empty_dirs)));
     }
+    if let Some(special) = special {
+        let mut special = special.to_vec();
+        sort_raw(&mut special, &["path"])?;
+        pairs.push(("special", JsonValue::List(special)));
+    }
     Some(JsonValue::object(pairs))
 }
 
@@ -676,6 +695,7 @@ pub struct Fingerprint {
     pub modes: Vec<ModeEntry>,
     pub ignored: Vec<IgnoredFile>,
     pub empty_dirs: Vec<JsonValue>,
+    pub special: Vec<SpecialFile>,
 }
 
 /// One submodule of the tree, the commit the index records
@@ -737,19 +757,23 @@ impl Fingerprint {
         let (raw_modes, modes_stand) = read_raw_modes(data)?;
         let (raw_ignored, ignored_stand) = read_raw_ignored(data)?;
         let (raw_empty_dirs, empty_dirs_stand) = read_raw_empty_dirs(data)?;
+        let (raw_special, special_stand) = read_raw_special(data)?;
         let commit_raw = data.get("commit").cloned().ok_or_else(decode)?;
         let patterns_raw: Vec<JsonValue> = match data.get("generated_patterns") {
             None => Vec::new(),
             Some(value) => raw_sequence(value).ok_or_else(decode)?,
         };
         refuse_duplicate_raw(
-            &raw_tracked,
-            &raw_generated,
-            &raw_untracked,
+            [
+                &raw_tracked,
+                &raw_generated,
+                &raw_untracked,
+                &raw_submodules,
+                &raw_modes,
+                &raw_ignored,
+                &raw_special,
+            ],
             &raw_dirty,
-            &raw_submodules,
-            &raw_modes,
-            &raw_ignored,
         )?;
         refuse_duplicate_empty_dirs(&raw_empty_dirs)?;
         let recorded = match data.get("digest") {
@@ -788,6 +812,11 @@ impl Fingerprint {
             } else {
                 None
             },
+            if special_stand {
+                Some(&raw_special)
+            } else {
+                None
+            },
         )
         .ok_or_else(decode)?;
         // A lone surrogate standing in a value the digest
@@ -804,6 +833,7 @@ impl Fingerprint {
                 &raw_modes,
                 &raw_ignored,
                 &raw_empty_dirs,
+                &raw_special,
             ]
             .iter()
             .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
@@ -846,6 +876,7 @@ impl Fingerprint {
             modes: raw_modes.iter().map(member_mode).collect(),
             ignored: raw_ignored.iter().map(member_ignored).collect(),
             empty_dirs: raw_empty_dirs,
+            special: raw_special.iter().map(member_special).collect(),
         })
     }
 }
@@ -868,8 +899,9 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "modes",
         "ignored",
         "empty_dirs",
+        "special",
     ];
-    let fields: [(&str, &[&str]); 7] = [
+    let fields: [(&str, &[&str]); 8] = [
         ("tracked", &["path", "blob", "index_blobs"]),
         ("dirty", &["path", "kind"]),
         ("generated", &["path", "blob"]),
@@ -877,6 +909,7 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         ("submodules", &["path", "index_commit", "head", "digest"]),
         ("modes", &["path", "mode"]),
         ("ignored", &["path", "blob"]),
+        ("special", &["path", "kind"]),
     ];
     let pairs = match data.as_object() {
         Some(pairs) => pairs,
@@ -1057,6 +1090,40 @@ fn read_raw_empty_dirs(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Final
             return Err(decode());
         }
         out.push(entry.clone());
+    }
+    Ok((out, true))
+}
+
+/// Take a special member out of its payload entry shape.
+fn member_special(entry: &JsonValue) -> SpecialFile {
+    SpecialFile {
+        path: entry.get("path").expect("a payload entry stands").clone(),
+        kind: entry.get("kind").expect("a payload entry stands").clone(),
+    }
+}
+
+/// Read the special member of a record into payload entry
+/// shape, with values as written, and whether the member
+/// stands in the record at all. The member stands absent as
+/// the empty list, a record carrying no such member reading
+/// as a tree holding no special file (SF-4). An entry that
+/// does not decode as an object carrying a path and a kind
+/// refuses in the decode family, as the slice states.
+fn read_raw_special(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("special") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !entry.is_object() {
+            return Err(decode());
+        }
+        let path = entry.get("path").cloned().ok_or_else(decode)?;
+        let kind = entry.get("kind").cloned().ok_or_else(decode)?;
+        out.push(JsonValue::object(vec![("path", path), ("kind", kind)]));
     }
     Ok((out, true))
 }
@@ -1313,6 +1380,16 @@ fn walk_dir(
             .into_owned()
             .into_bytes();
         let relative = require_utf8_path(&relative_bytes)?;
+        // A special file standing under a declared pattern is
+        // passed by as a directory standing as itself is passed
+        // by (SF-3). It has no content to hash and stands in
+        // the special member alone.
+        if let Ok(meta) = std::fs::symlink_metadata(&relative_path) {
+            let kind = meta.file_type();
+            if !kind.is_file() && !kind.is_symlink() {
+                continue;
+            }
+        }
         if compiled
             .iter()
             .any(|pattern| glob::matches(pattern, &relative))
@@ -1588,6 +1665,7 @@ pub fn compute_fingerprint_tokens(
     let ignored = ignored_files(root, &generated_paths)?;
     let modes = mode_entries(root, &generated, &untracked, &ignored);
     let empty_dirs = empty_directories(root)?;
+    let special = special_files(root)?;
     Ok(Fingerprint {
         commit: JsonValue::text(commit),
         tracked,
@@ -1608,6 +1686,7 @@ pub fn compute_fingerprint_tokens(
         modes,
         ignored,
         empty_dirs,
+        special,
     })
 }
 
@@ -1691,6 +1770,96 @@ fn gather_directories(
                 ancestor = path.parent();
             }
         }
+    }
+    Ok(())
+}
+
+/// The special files of a tree, every entry standing under
+/// the root that is neither a regular file nor a directory
+/// nor a symbolic link, each with the word its kind carries,
+/// sorted by path (SF-2 and SF-3). The reading is the
+/// filesystem walk of the tree itself in the form the sixth
+/// slice's walk takes, the git reading naming no such entry.
+/// The walk never enters the .git folder and never enters
+/// the interior of a submodule's checkout, and the ignore
+/// rules reach no part of it.
+fn special_files(root: &Path) -> Result<Vec<SpecialFile>, FinaltreeError> {
+    let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
+        .into_iter()
+        .map(|(relative, _)| relative)
+        .collect();
+    let mut out = Vec::new();
+    gather_special(root, root, &gitlinks, &mut out)?;
+    out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
+    Ok(out)
+}
+
+fn gather_special(
+    root: &Path,
+    dir: &Path,
+    gitlinks: &std::collections::BTreeSet<String>,
+    out: &mut Vec<SpecialFile>,
+) -> Result<(), FinaltreeError> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return Ok(()),
+    };
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        if entry.file_name() == ".git" {
+            continue;
+        }
+        let file_type = match entry.file_type() {
+            Ok(kind) => kind,
+            Err(_) => continue,
+        };
+        let full = entry.path();
+        let stripped = match full.strip_prefix(root) {
+            Ok(stripped) => stripped,
+            Err(_) => continue,
+        };
+        #[cfg(unix)]
+        let relative_bytes = {
+            use std::os::unix::ffi::OsStrExt;
+            stripped.as_os_str().as_bytes().to_vec()
+        };
+        #[cfg(not(unix))]
+        let relative_bytes = stripped.to_string_lossy().into_owned().into_bytes();
+        let relative = require_utf8_path(&relative_bytes)?;
+        if file_type.is_dir() {
+            // A directory standing as itself. A gitlink path is
+            // never descended into, its interior standing in the
+            // submodule's own fingerprint.
+            if gitlinks.contains(&relative) {
+                continue;
+            }
+            gather_special(root, &full, gitlinks, out)?;
+            continue;
+        }
+        if file_type.is_file() || file_type.is_symlink() {
+            continue;
+        }
+        #[cfg(unix)]
+        let kind = {
+            use std::os::unix::fs::FileTypeExt;
+            if file_type.is_fifo() {
+                "fifo"
+            } else if file_type.is_socket() {
+                "socket"
+            } else if file_type.is_block_device() {
+                "block device"
+            } else if file_type.is_char_device() {
+                "character device"
+            } else {
+                continue;
+            }
+        };
+        #[cfg(not(unix))]
+        continue;
+        #[cfg(unix)]
+        out.push(SpecialFile {
+            path: JsonValue::text(relative),
+            kind: JsonValue::text(kind),
+        });
     }
     Ok(())
 }
