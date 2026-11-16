@@ -718,6 +718,37 @@ pub fn compare_fingerprints(
             _ => {}
         }
     }
+    let kind_of = |fingerprint: &Fingerprint, path: &JsonValue| -> Option<JsonValue> {
+        fingerprint
+            .special
+            .iter()
+            .find(|entry| py_set_eq(&entry.path, path))
+            .map(|entry| entry.kind.clone())
+    };
+    let expected_special: Vec<&JsonValue> =
+        expected.special.iter().map(|entry| &entry.path).collect();
+    let actual_special: Vec<&JsonValue> = actual.special.iter().map(|entry| &entry.path).collect();
+    let mut special_paths = union_paths(
+        expected_special.iter().copied(),
+        actual_special.iter().copied(),
+    );
+    sort_values(&mut special_paths).ok_or_else(decode)?;
+    for path in &special_paths {
+        match (kind_of(expected, path), kind_of(actual, path)) {
+            (Some(_), None) => {
+                differences.push(format!("special file removed {}", py_str(path)));
+            }
+            (None, Some(_)) => {
+                differences.push(format!("special file added {}", py_str(path)));
+            }
+            (Some(expected_kind), Some(actual_kind)) => {
+                if !py_set_eq(&expected_kind, &actual_kind) {
+                    differences.push(format!("special file changed {}", py_str(path)));
+                }
+            }
+            (None, None) => {}
+        }
+    }
     let mode_of = |fingerprint: &Fingerprint, path: &JsonValue| -> JsonValue {
         fingerprint
             .modes
