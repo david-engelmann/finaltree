@@ -511,6 +511,35 @@ fn count_by<T: PartialEq>(
 /// family of the record reading. A sort the comparison runs
 /// over values the Python ordering cannot compare stops that
 /// reading uncaught, and the port refuses it here.
+/// The paths of the members that name files, standing as
+/// the traces by which a directory stands on one side of a
+/// comparison (DM-5).
+fn member_file_paths(fingerprint: &Fingerprint) -> Vec<&JsonValue> {
+    let mut paths: Vec<&JsonValue> = Vec::new();
+    for entry in &fingerprint.tracked {
+        paths.push(&entry.path);
+    }
+    for entry in &fingerprint.dirty {
+        paths.push(&entry.path);
+    }
+    for entry in &fingerprint.generated {
+        paths.push(&entry.path);
+    }
+    for entry in &fingerprint.untracked {
+        paths.push(&entry.path);
+    }
+    for entry in &fingerprint.ignored {
+        paths.push(&entry.path);
+    }
+    for entry in &fingerprint.modes {
+        paths.push(&entry.path);
+    }
+    for entry in &fingerprint.special {
+        paths.push(&entry.path);
+    }
+    paths
+}
+
 pub fn compare_fingerprints(
     expected: &Fingerprint,
     actual: &Fingerprint,
@@ -778,6 +807,75 @@ pub fn compare_fingerprints(
             && !py_set_eq(&mode_of(expected, path), &mode_of(actual, path))
         {
             differences.push(format!("file mode changed {}", py_str(path)));
+        }
+    }
+    // The directory mode comparison (DM-5). A directory
+    // stands on a side where the record names it by any
+    // trace, its own dir_modes entry or an empty_dirs entry
+    // or any member's path standing below it. A directory
+    // standing on both sides whose standings differ names a
+    // difference, a side carrying no entry standing in the
+    // plain family for this comparison.
+    let standing_directories = |fingerprint: &Fingerprint| -> Vec<JsonValue> {
+        let mut dirs: Vec<JsonValue> = Vec::new();
+        let add = |dirs: &mut Vec<JsonValue>, path: &JsonValue, itself: bool| {
+            let JsonValue::Text(text) = path else {
+                return;
+            };
+            let parts: Vec<&str> = text.split('/').collect();
+            let upto = if itself { parts.len() } else { parts.len() - 1 };
+            for take in 1..=upto {
+                let prefix = JsonValue::text(parts[..take].join("/"));
+                if !dirs.iter().any(|standing| py_set_eq(standing, &prefix)) {
+                    dirs.push(prefix);
+                }
+            }
+        };
+        for entry in member_file_paths(fingerprint) {
+            add(&mut dirs, entry, false);
+        }
+        for path in &fingerprint.empty_dirs {
+            add(&mut dirs, path, true);
+        }
+        for entry in &fingerprint.submodules {
+            add(&mut dirs, &entry.path, true);
+        }
+        for entry in &fingerprint.dir_modes {
+            add(&mut dirs, &entry.path, true);
+        }
+        dirs
+    };
+    let dir_mode_of = |fingerprint: &Fingerprint, path: &JsonValue| -> Option<JsonValue> {
+        fingerprint
+            .dir_modes
+            .iter()
+            .find(|entry| py_set_eq(&entry.path, path))
+            .map(|entry| entry.mode.clone())
+    };
+    let expected_dirs = standing_directories(expected);
+    let actual_dirs = standing_directories(actual);
+    let mut dir_mode_paths = union_paths(
+        expected.dir_modes.iter().map(|entry| &entry.path),
+        actual.dir_modes.iter().map(|entry| &entry.path),
+    );
+    sort_values(&mut dir_mode_paths).ok_or_else(decode)?;
+    for path in &dir_mode_paths {
+        let expected_stands = expected_dirs
+            .iter()
+            .any(|standing| py_set_eq(standing, path));
+        let actual_stands = actual_dirs.iter().any(|standing| py_set_eq(standing, path));
+        if !expected_stands || !actual_stands {
+            continue;
+        }
+        let expected_mode = dir_mode_of(expected, path);
+        let actual_mode = dir_mode_of(actual, path);
+        let differs = match (&expected_mode, &actual_mode) {
+            (None, None) => false,
+            (Some(a), Some(b)) => !py_set_eq(a, b),
+            _ => true,
+        };
+        if differs {
+            differences.push(format!("directory mode changed {}", py_str(path)));
         }
     }
     let mut submodule_paths: Vec<&JsonValue> = Vec::new();
