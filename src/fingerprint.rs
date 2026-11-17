@@ -61,6 +61,16 @@ pub struct IgnoredFile {
     pub blob: JsonValue,
 }
 
+/// One regular file or symbolic link standing under a
+/// .git name below the root, its path and the hash of its
+/// content under the name blob, a symbolic link standing
+/// as the git blob of its target text.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DotGitFile {
+    pub path: JsonValue,
+    pub blob: JsonValue,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpecialFile {
     pub path: JsonValue,
@@ -188,6 +198,13 @@ fn ignored_entry(entry: &IgnoredFile) -> JsonValue {
     ])
 }
 
+fn dot_git_entry(entry: &DotGitFile) -> JsonValue {
+    JsonValue::object(vec![
+        ("path", entry.path.clone()),
+        ("blob", entry.blob.clone()),
+    ])
+}
+
 /// The member record both the digest and the emitted dict
 /// shape, with member lists sorted under the Python ordering
 /// of the values as they stand. A computed fingerprint holds
@@ -248,6 +265,11 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
             fingerprint.file_modes.iter().map(file_mode_entry).collect();
         let _ = sort_raw(&mut file_modes, &["path"]);
         pairs.push(("file_modes", JsonValue::List(file_modes)));
+    }
+    if !fingerprint.dot_git.is_empty() {
+        let mut dot_git: Vec<JsonValue> = fingerprint.dot_git.iter().map(dot_git_entry).collect();
+        let _ = sort_raw(&mut dot_git, &["path"]);
+        pairs.push(("dot_git", JsonValue::List(dot_git)));
     }
     JsonValue::object(pairs)
 }
@@ -311,7 +333,7 @@ pub(crate) fn py_set_eq(a: &JsonValue, b: &JsonValue) -> bool {
 /// stops that reading uncaught, and the port refuses it in
 /// the decode family.
 fn refuse_duplicate_raw(
-    path_members: [&[JsonValue]; 9],
+    path_members: [&[JsonValue]; 10],
     dirty: &[JsonValue],
 ) -> Result<(), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
@@ -666,6 +688,7 @@ fn raw_payload(
     special: Option<&[JsonValue]>,
     dir_modes: Option<&[JsonValue]>,
     file_modes: Option<&[JsonValue]>,
+    dot_git: Option<&[JsonValue]>,
 ) -> Option<JsonValue> {
     let mut tracked = tracked.to_vec();
     sort_raw(&mut tracked, &["path"])?;
@@ -718,6 +741,11 @@ fn raw_payload(
         sort_raw(&mut file_modes, &["path"])?;
         pairs.push(("file_modes", JsonValue::List(file_modes)));
     }
+    if let Some(dot_git) = dot_git {
+        let mut dot_git = dot_git.to_vec();
+        sort_raw(&mut dot_git, &["path"])?;
+        pairs.push(("dot_git", JsonValue::List(dot_git)));
+    }
     Some(JsonValue::object(pairs))
 }
 
@@ -736,6 +764,7 @@ pub struct Fingerprint {
     pub special: Vec<SpecialFile>,
     pub dir_modes: Vec<DirModeEntry>,
     pub file_modes: Vec<FileModeEntry>,
+    pub dot_git: Vec<DotGitFile>,
 }
 
 /// One submodule of the tree, the commit the index records
@@ -821,6 +850,7 @@ impl Fingerprint {
         let (raw_special, special_stand) = read_raw_special(data)?;
         let (raw_dir_modes, dir_modes_stand) = read_raw_dir_modes(data)?;
         let (raw_file_modes, file_modes_stand) = read_raw_file_modes(data)?;
+        let (raw_dot_git, dot_git_stand) = read_raw_dot_git(data)?;
         let commit_raw = data.get("commit").cloned().ok_or_else(decode)?;
         let patterns_raw: Vec<JsonValue> = match data.get("generated_patterns") {
             None => Vec::new(),
@@ -837,6 +867,7 @@ impl Fingerprint {
                 &raw_special,
                 &raw_dir_modes,
                 &raw_file_modes,
+                &raw_dot_git,
             ],
             &raw_dirty,
         )?;
@@ -892,6 +923,11 @@ impl Fingerprint {
             } else {
                 None
             },
+            if dot_git_stand {
+                Some(&raw_dot_git)
+            } else {
+                None
+            },
         )
         .ok_or_else(decode)?;
         // A lone surrogate standing in a value the digest
@@ -911,6 +947,7 @@ impl Fingerprint {
                 &raw_special,
                 &raw_dir_modes,
                 &raw_file_modes,
+                &raw_dot_git,
             ]
             .iter()
             .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
@@ -956,6 +993,7 @@ impl Fingerprint {
             special: raw_special.iter().map(member_special).collect(),
             dir_modes: raw_dir_modes.iter().map(member_dir_mode).collect(),
             file_modes: raw_file_modes.iter().map(member_file_mode).collect(),
+            dot_git: raw_dot_git.iter().map(member_dot_git).collect(),
         })
     }
 }
@@ -981,8 +1019,9 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "special",
         "dir_modes",
         "file_modes",
+        "dot_git",
     ];
-    let fields: [(&str, &[&str]); 10] = [
+    let fields: [(&str, &[&str]); 11] = [
         ("tracked", &["path", "blob", "index_blobs"]),
         ("dirty", &["path", "kind"]),
         ("generated", &["path", "blob"]),
@@ -993,6 +1032,7 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         ("special", &["path", "kind"]),
         ("dir_modes", &["path", "mode"]),
         ("file_modes", &["path", "mode"]),
+        ("dot_git", &["path", "blob"]),
     ];
     let pairs = match data.as_object() {
         Some(pairs) => pairs,
@@ -1138,6 +1178,30 @@ fn read_raw_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeE
 fn read_raw_ignored(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("ignored") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !entry.is_object() {
+            return Err(decode());
+        }
+        let path = entry.get("path").cloned().ok_or_else(decode)?;
+        let blob = entry.get("blob").cloned().ok_or_else(decode)?;
+        out.push(JsonValue::object(vec![("path", path), ("blob", blob)]));
+    }
+    Ok((out, true))
+}
+
+/// Take the dot_git member out of a record in its raw
+/// payload entry shape, on the standing of the modes member
+/// reading. A record carrying no dot_git member reads as a
+/// tree holding no file standing under a .git name below
+/// the root (DG-4).
+fn read_raw_dot_git(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("dot_git") {
         None => return Ok((Vec::new(), false)),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
@@ -1345,6 +1409,13 @@ fn member_ignored(entry: &JsonValue) -> IgnoredFile {
     }
 }
 
+fn member_dot_git(entry: &JsonValue) -> DotGitFile {
+    DotGitFile {
+        path: entry.get("path").expect("a payload entry stands").clone(),
+        blob: entry.get("blob").expect("a payload entry stands").clone(),
+    }
+}
+
 fn member_untracked(entry: &JsonValue) -> UntrackedFile {
     UntrackedFile {
         path: entry.get("path").expect("a payload entry stands").clone(),
@@ -1533,14 +1604,14 @@ fn walk_dir(
         names.push((name_bytes, entry.path(), follows_dir, is_link));
     }
     // Directory names are visited in sorted order and the dot
-    // git directory is pruned at every level, as the os.walk
+    // git directory is pruned at the root alone, as the os.walk
     // reading orders them. The descent takes only the folders
     // standing as themselves, never a link naming a folder.
     let mut dirnames: Vec<&(Vec<u8>, PathBuf, bool, bool)> = names
         .iter()
         .filter(|(_, _, follows_dir, is_link)| *follows_dir && !*is_link)
         .collect();
-    dirnames.retain(|(name, _, _, _)| name != b".git");
+    dirnames.retain(|(name, _, _, _)| name != b".git" || dir != root);
     dirnames.sort_by(|a, b| a.0.cmp(&b.0));
     let mut filenames: Vec<&(Vec<u8>, PathBuf, bool, bool)> = names
         .iter()
@@ -1861,6 +1932,7 @@ pub fn compute_fingerprint_tokens(
     let special = special_files(root)?;
     let dir_modes = directory_modes(root)?;
     let file_modes = file_permissions(root)?;
+    let dot_git = dot_git_files(root)?;
     Ok(Fingerprint {
         commit: JsonValue::text(commit),
         tracked,
@@ -1884,6 +1956,7 @@ pub fn compute_fingerprint_tokens(
         special,
         dir_modes,
         file_modes,
+        dot_git,
     })
 }
 
@@ -1892,10 +1965,11 @@ pub fn compute_fingerprint_tokens(
 /// itself a directory, as relative path texts sorted by path
 /// (ED-2 and ED-3). The reading is the filesystem walk of the
 /// tree itself, the git reading naming no directory standing
-/// empty. The walk never enters the .git folder and never
-/// enters the interior of a submodule's checkout, a directory
-/// standing at a gitlink path standing named nowhere in this
-/// member, and the ignore rules reach no part of it.
+/// empty. The walk never enters the .git folder standing
+/// at the root and never enters the interior of a submodule's
+/// checkout, a directory standing at a gitlink path standing
+/// named nowhere in this member, and the ignore rules reach
+/// no part of it.
 fn empty_directories(root: &Path) -> Result<Vec<JsonValue>, FinaltreeError> {
     let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
         .into_iter()
@@ -1925,7 +1999,7 @@ fn gather_directories(
         Err(_) => return Ok(()),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
-        if entry.file_name() == ".git" {
+        if entry.file_name() == ".git" && dir == root {
             continue;
         }
         let file_type = match entry.file_type() {
@@ -2012,8 +2086,9 @@ fn parse_dir_mode(spelling: &str) -> Option<u32> {
 /// (DM-2 and DM-3). The reading is the filesystem walk of
 /// the tree itself in the form the sixth slice's walk
 /// takes, the git reading naming no directory mode. The
-/// walk never enters the .git folder and never enters the
-/// interior of a submodule's checkout, a submodule's
+/// walk never enters the .git folder standing at the root
+/// and never enters the interior of a submodule's checkout,
+/// a submodule's
 /// checkout directory standing in the walk as a directory
 /// standing to be read and not entered, and the ignore
 /// rules reach no part of it.
@@ -2039,7 +2114,7 @@ fn gather_dir_modes(
         Err(_) => return Ok(()),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
-        if entry.file_name() == ".git" {
+        if entry.file_name() == ".git" && dir == root {
             continue;
         }
         let file_type = match entry.file_type() {
@@ -2092,9 +2167,10 @@ fn gather_dir_modes(
 /// filesystem walk of the tree itself in the form the
 /// sixth slice's walk takes, the git reading naming no
 /// file permission beyond the executable standing. The
-/// walk never enters the .git folder and never enters the
-/// interior of a submodule's checkout, and the ignore
-/// rules reach no part of it. Regular files only stand in
+/// walk never enters the .git folder standing at the root
+/// and never enters the interior of a submodule's checkout,
+/// and the ignore rules reach no part of it. Regular files
+/// only stand in
 /// the member, a link standing and a special standing
 /// standing outside it under the members that carry them.
 fn file_permissions(root: &Path) -> Result<Vec<FileModeEntry>, FinaltreeError> {
@@ -2119,7 +2195,7 @@ fn gather_file_modes(
         Err(_) => return Ok(()),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
-        if entry.file_name() == ".git" {
+        if entry.file_name() == ".git" && dir == root {
             continue;
         }
         let file_type = match entry.file_type() {
@@ -2177,9 +2253,9 @@ fn gather_file_modes(
 /// sorted by path (SF-2 and SF-3). The reading is the
 /// filesystem walk of the tree itself in the form the sixth
 /// slice's walk takes, the git reading naming no such entry.
-/// The walk never enters the .git folder and never enters
-/// the interior of a submodule's checkout, and the ignore
-/// rules reach no part of it.
+/// The walk never enters the .git folder standing at the
+/// root and never enters the interior of a submodule's
+/// checkout, and the ignore rules reach no part of it.
 fn special_files(root: &Path) -> Result<Vec<SpecialFile>, FinaltreeError> {
     let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
         .into_iter()
@@ -2202,7 +2278,7 @@ fn gather_special(
         Err(_) => return Ok(()),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
-        if entry.file_name() == ".git" {
+        if entry.file_name() == ".git" && dir == root {
             continue;
         }
         let file_type = match entry.file_type() {
@@ -2300,6 +2376,90 @@ fn ignored_files(
     }
     out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     Ok(out)
+}
+
+/// The files standing under a .git name below the root,
+/// every regular file and symbolic link whose relative
+/// path carries a .git component below its first
+/// component, each with the hash of its content under the
+/// standing blob reading, sorted by path (DG-2 and DG-3).
+/// The reading is the filesystem walk of the tree itself,
+/// the git reading naming no such file. The walk never
+/// enters the .git folder standing at the root and never
+/// enters the interior of a submodule's checkout, and the
+/// ignore rules reach no part of it.
+fn dot_git_files(root: &Path) -> Result<Vec<DotGitFile>, FinaltreeError> {
+    let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
+        .into_iter()
+        .map(|(relative, _)| relative)
+        .collect();
+    let mut out = Vec::new();
+    gather_dot_git(root, root, &gitlinks, &mut out)?;
+    out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
+    Ok(out)
+}
+
+fn gather_dot_git(
+    root: &Path,
+    dir: &Path,
+    gitlinks: &std::collections::BTreeSet<String>,
+    out: &mut Vec<DotGitFile>,
+) -> Result<(), FinaltreeError> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return Ok(()),
+    };
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        if entry.file_name() == ".git" && dir == root {
+            continue;
+        }
+        let file_type = match entry.file_type() {
+            Ok(kind) => kind,
+            Err(_) => continue,
+        };
+        let full = entry.path();
+        let stripped = match full.strip_prefix(root) {
+            Ok(stripped) => stripped,
+            Err(_) => continue,
+        };
+        #[cfg(unix)]
+        let relative_bytes = {
+            use std::os::unix::ffi::OsStrExt;
+            stripped.as_os_str().as_bytes().to_vec()
+        };
+        #[cfg(not(unix))]
+        let relative_bytes = stripped.to_string_lossy().into_owned().into_bytes();
+        let relative = require_utf8_path(&relative_bytes)?;
+        if file_type.is_dir() {
+            // A directory standing as itself, a folder named
+            // .git below the root among them, descended into
+            // like any directory. A gitlink path is never
+            // descended into, its interior standing in the
+            // submodule's own fingerprint.
+            if gitlinks.contains(&relative) {
+                continue;
+            }
+            gather_dot_git(root, &full, gitlinks, out)?;
+            continue;
+        }
+        if !file_type.is_file() && !file_type.is_symlink() {
+            // A special standing, carried by the member that
+            // names it.
+            continue;
+        }
+        let below_root = Path::new(&relative)
+            .components()
+            .skip(1)
+            .any(|component| component.as_os_str() == ".git");
+        if !below_root {
+            continue;
+        }
+        out.push(DotGitFile {
+            path: JsonValue::text(relative.clone()),
+            blob: blob_value(content_blob(root, &relative)?),
+        });
+    }
+    Ok(())
 }
 
 /// The mode standing of one file outside the index, in the
