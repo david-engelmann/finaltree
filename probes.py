@@ -148,7 +148,40 @@ def probe_c():
         )
 
 
+def probe_a2():
+    base = os.path.join(ROOT, "probe-a2")
+    shutil.rmtree(base, ignore_errors=True)
+    repo = fresh_repo(base)
+    loose = os.path.join(repo, "loose.txt")
+    with open(loose, "w") as handle:
+        handle.write("loose\n")
+    for mode in (0o644, 0o600, 0o444, 0o400, 0o666, 0o755, 0o777, 0o711, 0o500, 0o4755, 0o2755, 0o700):
+        os.chmod(loose, mode)
+        record = digest(repo)
+        print("A2 untracked", oct(mode), record["digest"][:16], "modes" in record, record.get("modes"))
+    os.chmod(loose, 0o644)
+    os.remove(loose)
+    artifact = os.path.join(repo, "artifact.bin")
+    with open(artifact, "w") as handle:
+        handle.write("artifact\n")
+    for mode in (0o644, 0o777, 0o400):
+        os.chmod(artifact, mode)
+        record = digest(repo, ["*.bin"])
+        print("A2 generated", oct(mode), record["digest"][:16], record.get("modes"))
+    os.remove(artifact)
+    with open(os.path.join(repo, ".gitignore"), "w") as handle:
+        handle.write("secret.txt\n")
+    secret = os.path.join(repo, "secret.txt")
+    with open(secret, "w") as handle:
+        handle.write("secret\n")
+    for mode in (0o644, 0o400, 0o777):
+        os.chmod(secret, mode)
+        record = digest(repo)
+        print("A2 ignored", oct(mode), record["digest"][:16], record.get("modes"))
+
+
 if __name__ == "__main__":
     probe_a()
+    probe_a2()
     probe_b()
     probe_c()
