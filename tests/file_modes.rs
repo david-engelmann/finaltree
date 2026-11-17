@@ -309,8 +309,7 @@ fn test_a_record_carrying_a_misspelled_file_permission_is_refused() {
         }
     }
     let rewritten = JsonValue::Object(pairs);
-    let error =
-        Fingerprint::from_dict(&rewritten).expect_err("the git spelling refuses");
+    let error = Fingerprint::from_dict(&rewritten).expect_err("the git spelling refuses");
     assert_eq!(error.to_string(), "the fingerprint record does not decode");
     set_file_mode(&root, "loose.txt", 0o644);
 }
