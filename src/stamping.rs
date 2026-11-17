@@ -858,7 +858,9 @@ pub fn compare_fingerprints(
     // or any member's path standing below it. A directory
     // standing on both sides whose standings differ names a
     // difference, a side carrying no entry standing in the
-    // plain family for this comparison.
+    // plain family for this comparison. The root stands on
+    // both sides by construction, its spelling seeded into
+    // the list before any trace is read (RM-5).
     let standing_directories = |fingerprint: &Fingerprint| -> Vec<JsonValue> {
         let mut dirs: Vec<JsonValue> = Vec::new();
         let add = |dirs: &mut Vec<JsonValue>, path: &JsonValue, itself: bool| {
@@ -874,6 +876,7 @@ pub fn compare_fingerprints(
                 }
             }
         };
+        add(&mut dirs, &JsonValue::text("."), true);
         for entry in member_file_paths(fingerprint) {
             add(&mut dirs, entry, false);
         }
