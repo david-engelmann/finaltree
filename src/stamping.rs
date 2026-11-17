@@ -919,7 +919,9 @@ pub fn compare_fingerprints(
         let expected_stands = expected_files
             .iter()
             .any(|standing| py_set_eq(standing, path));
-        let actual_stands = actual_files.iter().any(|standing| py_set_eq(standing, path));
+        let actual_stands = actual_files
+            .iter()
+            .any(|standing| py_set_eq(standing, path));
         if !expected_stands || !actual_stands {
             continue;
         }

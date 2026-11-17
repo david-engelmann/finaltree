@@ -244,11 +244,8 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
         pairs.push(("dir_modes", JsonValue::List(dir_modes)));
     }
     if !fingerprint.file_modes.is_empty() {
-        let mut file_modes: Vec<JsonValue> = fingerprint
-            .file_modes
-            .iter()
-            .map(file_mode_entry)
-            .collect();
+        let mut file_modes: Vec<JsonValue> =
+            fingerprint.file_modes.iter().map(file_mode_entry).collect();
         let _ = sort_raw(&mut file_modes, &["path"]);
         pairs.push(("file_modes", JsonValue::List(file_modes)));
     }
