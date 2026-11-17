@@ -1,0 +1,15 @@
+name: probe
+
+on:
+  push:
+    branches: [finaltree-r10-probe-diag]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the base binary
+        run: cargo build --bins
+      - name: Run the slice 9 probes
+        run: python3 probes.py ./target/debug/finaltree /tmp/probes-out
