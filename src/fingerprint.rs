@@ -243,6 +243,12 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
         let _ = sort_raw(&mut dir_modes, &["path"]);
         pairs.push(("dir_modes", JsonValue::List(dir_modes)));
     }
+    if !fingerprint.file_modes.is_empty() {
+        let mut file_modes: Vec<JsonValue> =
+            fingerprint.file_modes.iter().map(file_mode_entry).collect();
+        let _ = sort_raw(&mut file_modes, &["path"]);
+        pairs.push(("file_modes", JsonValue::List(file_modes)));
+    }
     JsonValue::object(pairs)
 }
 
@@ -261,6 +267,13 @@ fn mode_entry(entry: &ModeEntry) -> JsonValue {
 }
 
 fn dir_mode_entry(entry: &DirModeEntry) -> JsonValue {
+    JsonValue::object(vec![
+        ("path", entry.path.clone()),
+        ("mode", entry.mode.clone()),
+    ])
+}
+
+fn file_mode_entry(entry: &FileModeEntry) -> JsonValue {
     JsonValue::object(vec![
         ("path", entry.path.clone()),
         ("mode", entry.mode.clone()),
@@ -298,7 +311,7 @@ pub(crate) fn py_set_eq(a: &JsonValue, b: &JsonValue) -> bool {
 /// stops that reading uncaught, and the port refuses it in
 /// the decode family.
 fn refuse_duplicate_raw(
-    path_members: [&[JsonValue]; 8],
+    path_members: [&[JsonValue]; 9],
     dirty: &[JsonValue],
 ) -> Result<(), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
@@ -652,6 +665,7 @@ fn raw_payload(
     empty_dirs: Option<&[JsonValue]>,
     special: Option<&[JsonValue]>,
     dir_modes: Option<&[JsonValue]>,
+    file_modes: Option<&[JsonValue]>,
 ) -> Option<JsonValue> {
     let mut tracked = tracked.to_vec();
     sort_raw(&mut tracked, &["path"])?;
@@ -699,6 +713,11 @@ fn raw_payload(
         sort_raw(&mut dir_modes, &["path"])?;
         pairs.push(("dir_modes", JsonValue::List(dir_modes)));
     }
+    if let Some(file_modes) = file_modes {
+        let mut file_modes = file_modes.to_vec();
+        sort_raw(&mut file_modes, &["path"])?;
+        pairs.push(("file_modes", JsonValue::List(file_modes)));
+    }
     Some(JsonValue::object(pairs))
 }
 
@@ -716,6 +735,7 @@ pub struct Fingerprint {
     pub empty_dirs: Vec<JsonValue>,
     pub special: Vec<SpecialFile>,
     pub dir_modes: Vec<DirModeEntry>,
+    pub file_modes: Vec<FileModeEntry>,
 }
 
 /// One submodule of the tree, the commit the index records
@@ -747,6 +767,17 @@ pub struct ModeEntry {
 /// bits fit three and at four where a special bit stands.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DirModeEntry {
+    pub path: JsonValue,
+    pub mode: JsonValue,
+}
+
+/// One regular file whose permission mode stands outside
+/// the plain family for files, its path and its mode
+/// spelled in octal over its permission and special bits,
+/// at three digits where those bits fit three and at four
+/// where a special bit stands.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FileModeEntry {
     pub path: JsonValue,
     pub mode: JsonValue,
 }
@@ -789,6 +820,7 @@ impl Fingerprint {
         let (raw_empty_dirs, empty_dirs_stand) = read_raw_empty_dirs(data)?;
         let (raw_special, special_stand) = read_raw_special(data)?;
         let (raw_dir_modes, dir_modes_stand) = read_raw_dir_modes(data)?;
+        let (raw_file_modes, file_modes_stand) = read_raw_file_modes(data)?;
         let commit_raw = data.get("commit").cloned().ok_or_else(decode)?;
         let patterns_raw: Vec<JsonValue> = match data.get("generated_patterns") {
             None => Vec::new(),
@@ -804,6 +836,7 @@ impl Fingerprint {
                 &raw_ignored,
                 &raw_special,
                 &raw_dir_modes,
+                &raw_file_modes,
             ],
             &raw_dirty,
         )?;
@@ -854,6 +887,11 @@ impl Fingerprint {
             } else {
                 None
             },
+            if file_modes_stand {
+                Some(&raw_file_modes)
+            } else {
+                None
+            },
         )
         .ok_or_else(decode)?;
         // A lone surrogate standing in a value the digest
@@ -872,6 +910,7 @@ impl Fingerprint {
                 &raw_empty_dirs,
                 &raw_special,
                 &raw_dir_modes,
+                &raw_file_modes,
             ]
             .iter()
             .any(|members| members.iter().any(|entry| entry.contains_surrogate()))
@@ -916,6 +955,7 @@ impl Fingerprint {
             empty_dirs: raw_empty_dirs,
             special: raw_special.iter().map(member_special).collect(),
             dir_modes: raw_dir_modes.iter().map(member_dir_mode).collect(),
+            file_modes: raw_file_modes.iter().map(member_file_mode).collect(),
         })
     }
 }
@@ -940,8 +980,9 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "empty_dirs",
         "special",
         "dir_modes",
+        "file_modes",
     ];
-    let fields: [(&str, &[&str]); 9] = [
+    let fields: [(&str, &[&str]); 10] = [
         ("tracked", &["path", "blob", "index_blobs"]),
         ("dirty", &["path", "kind"]),
         ("generated", &["path", "blob"]),
@@ -951,6 +992,7 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         ("ignored", &["path", "blob"]),
         ("special", &["path", "kind"]),
         ("dir_modes", &["path", "mode"]),
+        ("file_modes", &["path", "mode"]),
     ];
     let pairs = match data.as_object() {
         Some(pairs) => pairs,
@@ -1208,6 +1250,70 @@ fn read_raw_dir_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Finalt
             return Err(decode());
         };
         if plain_dir_mode(bits) || spell_dir_mode(bits) != *spelling {
+            return Err(decode());
+        }
+        out.push(JsonValue::object(vec![("path", path), ("mode", mode)]));
+    }
+    Ok((out, true))
+}
+
+/// The plain family of file modes, the standings the
+/// common umasks 022 and 002 and 027 and 077 and 007 supply
+/// from the creation standings, 0666 where no executable
+/// bit stands set and 0777 where one does (FP-1). A file
+/// standing at one of these modes stands in no member, so
+/// two checkouts of one tree under different common umasks
+/// stamp as one. A mode carrying a special bit stands
+/// outside the family whatever its remaining bits stand at,
+/// no umask supplying one.
+const PLAIN_FILE_MODES: [u32; 10] = [
+    0o600, 0o640, 0o644, 0o660, 0o664, 0o700, 0o750, 0o755, 0o770, 0o775,
+];
+
+fn plain_file_mode(bits: u32) -> bool {
+    PLAIN_FILE_MODES.contains(&bits)
+}
+
+/// Take a file_modes member out of its payload entry shape.
+fn member_file_mode(entry: &JsonValue) -> FileModeEntry {
+    FileModeEntry {
+        path: entry.get("path").expect("a payload entry stands").clone(),
+        mode: entry.get("mode").expect("a payload entry stands").clone(),
+    }
+}
+
+/// Read the file_modes member of a record into payload
+/// entry shape, with values as written, and whether the
+/// member stands in the record at all. The member stands
+/// absent as the empty list, a record carrying no such
+/// member reading as a tree whose files all stand inside
+/// the plain family (FP-4). An entry that does not decode
+/// as an object carrying a path and a mode refuses in the
+/// decode family, and a mode standing inside the plain
+/// family or spelled otherwise than the octal spelling
+/// refuses in the decode family with it, the computation
+/// never writing one.
+fn read_raw_file_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("file_modes") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !entry.is_object() {
+            return Err(decode());
+        }
+        let path = entry.get("path").cloned().ok_or_else(decode)?;
+        let mode = entry.get("mode").cloned().ok_or_else(decode)?;
+        let JsonValue::Text(spelling) = &mode else {
+            return Err(decode());
+        };
+        let Some(bits) = parse_dir_mode(spelling) else {
+            return Err(decode());
+        };
+        if plain_file_mode(bits) || spell_dir_mode(bits) != *spelling {
             return Err(decode());
         }
         out.push(JsonValue::object(vec![("path", path), ("mode", mode)]));
@@ -1754,6 +1860,7 @@ pub fn compute_fingerprint_tokens(
     let empty_dirs = empty_directories(root)?;
     let special = special_files(root)?;
     let dir_modes = directory_modes(root)?;
+    let file_modes = file_permissions(root)?;
     Ok(Fingerprint {
         commit: JsonValue::text(commit),
         tracked,
@@ -1776,6 +1883,7 @@ pub fn compute_fingerprint_tokens(
         empty_dirs,
         special,
         dir_modes,
+        file_modes,
     })
 }
 
@@ -1974,6 +2082,91 @@ fn gather_dir_modes(
             continue;
         }
         gather_dir_modes(root, &full, gitlinks, out)?;
+    }
+    Ok(())
+}
+
+/// The file permissions of a tree standing outside the
+/// plain family for files, each with its octal spelling,
+/// sorted by path (FP-2 and FP-3). The reading is the
+/// filesystem walk of the tree itself in the form the
+/// sixth slice's walk takes, the git reading naming no
+/// file permission beyond the executable standing. The
+/// walk never enters the .git folder and never enters the
+/// interior of a submodule's checkout, and the ignore
+/// rules reach no part of it. Regular files only stand in
+/// the member, a link standing and a special standing
+/// standing outside it under the members that carry them.
+fn file_permissions(root: &Path) -> Result<Vec<FileModeEntry>, FinaltreeError> {
+    let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
+        .into_iter()
+        .map(|(relative, _)| relative)
+        .collect();
+    let mut out = Vec::new();
+    gather_file_modes(root, root, &gitlinks, &mut out)?;
+    out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
+    Ok(out)
+}
+
+fn gather_file_modes(
+    root: &Path,
+    dir: &Path,
+    gitlinks: &std::collections::BTreeSet<String>,
+    out: &mut Vec<FileModeEntry>,
+) -> Result<(), FinaltreeError> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return Ok(()),
+    };
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        if entry.file_name() == ".git" {
+            continue;
+        }
+        let file_type = match entry.file_type() {
+            Ok(kind) => kind,
+            Err(_) => continue,
+        };
+        let full = entry.path();
+        let stripped = match full.strip_prefix(root) {
+            Ok(stripped) => stripped,
+            Err(_) => continue,
+        };
+        #[cfg(unix)]
+        let relative_bytes = {
+            use std::os::unix::ffi::OsStrExt;
+            stripped.as_os_str().as_bytes().to_vec()
+        };
+        #[cfg(not(unix))]
+        let relative_bytes = stripped.to_string_lossy().into_owned().into_bytes();
+        let relative = require_utf8_path(&relative_bytes)?;
+        if file_type.is_dir() {
+            // A directory standing as itself. A gitlink path is
+            // never descended into, its interior standing in
+            // the submodule's own fingerprint.
+            if gitlinks.contains(&relative) {
+                continue;
+            }
+            gather_file_modes(root, &full, gitlinks, out)?;
+            continue;
+        }
+        if !file_type.is_file() {
+            // A link standing or a special standing, each
+            // carried by the members that name them.
+            continue;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = std::fs::symlink_metadata(&full) {
+                let bits = meta.permissions().mode() & 0o7777;
+                if !plain_file_mode(bits) {
+                    out.push(FileModeEntry {
+                        path: JsonValue::text(relative.clone()),
+                        mode: JsonValue::text(spell_dir_mode(bits)),
+                    });
+                }
+            }
+        }
     }
     Ok(())
 }

@@ -878,6 +878,64 @@ pub fn compare_fingerprints(
             differences.push(format!("directory mode changed {}", py_str(path)));
         }
     }
+    // The file permission comparison (FP-5). A file stands
+    // on a side where the record names it by any trace, any
+    // member naming its path or its own file_modes entry. A
+    // file standing on both sides whose permission standings
+    // differ names a difference, a side carrying no entry
+    // standing in the plain family for this comparison.
+    let standing_files = |fingerprint: &Fingerprint| -> Vec<JsonValue> {
+        let mut files: Vec<JsonValue> = Vec::new();
+        for entry in member_file_paths(fingerprint) {
+            if !files.iter().any(|standing| py_set_eq(standing, entry)) {
+                files.push(entry.clone());
+            }
+        }
+        for entry in &fingerprint.file_modes {
+            if !files
+                .iter()
+                .any(|standing| py_set_eq(standing, &entry.path))
+            {
+                files.push(entry.path.clone());
+            }
+        }
+        files
+    };
+    let file_mode_of = |fingerprint: &Fingerprint, path: &JsonValue| -> Option<JsonValue> {
+        fingerprint
+            .file_modes
+            .iter()
+            .find(|entry| py_set_eq(&entry.path, path))
+            .map(|entry| entry.mode.clone())
+    };
+    let expected_files = standing_files(expected);
+    let actual_files = standing_files(actual);
+    let mut file_mode_paths = union_paths(
+        expected.file_modes.iter().map(|entry| &entry.path),
+        actual.file_modes.iter().map(|entry| &entry.path),
+    );
+    sort_values(&mut file_mode_paths).ok_or_else(decode)?;
+    for path in &file_mode_paths {
+        let expected_stands = expected_files
+            .iter()
+            .any(|standing| py_set_eq(standing, path));
+        let actual_stands = actual_files
+            .iter()
+            .any(|standing| py_set_eq(standing, path));
+        if !expected_stands || !actual_stands {
+            continue;
+        }
+        let expected_mode = file_mode_of(expected, path);
+        let actual_mode = file_mode_of(actual, path);
+        let differs = match (&expected_mode, &actual_mode) {
+            (None, None) => false,
+            (Some(a), Some(b)) => !py_set_eq(a, b),
+            _ => true,
+        };
+        if differs {
+            differences.push(format!("file permission changed {}", py_str(path)));
+        }
+    }
     let mut submodule_paths: Vec<&JsonValue> = Vec::new();
     for entry in expected.submodules.iter().chain(actual.submodules.iter()) {
         if !submodule_paths
