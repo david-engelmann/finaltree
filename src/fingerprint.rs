@@ -2091,13 +2091,27 @@ fn parse_dir_mode(spelling: &str) -> Option<u32> {
 /// a submodule's
 /// checkout directory standing in the walk as a directory
 /// standing to be read and not entered, and the ignore
-/// rules reach no part of it.
+/// rules reach no part of it. The reading reads the root
+/// itself beside the directories below it (RM-3).
 fn directory_modes(root: &Path) -> Result<Vec<DirModeEntry>, FinaltreeError> {
     let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
         .into_iter()
         .map(|(relative, _)| relative)
         .collect();
     let mut out = Vec::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(meta) = std::fs::metadata(root) {
+            let bits = meta.permissions().mode() & 0o7777;
+            if !plain_dir_mode(bits) {
+                out.push(DirModeEntry {
+                    path: JsonValue::text("."),
+                    mode: JsonValue::text(spell_dir_mode(bits)),
+                });
+            }
+        }
+    }
     gather_dir_modes(root, root, &gitlinks, &mut out)?;
     out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     Ok(out)
