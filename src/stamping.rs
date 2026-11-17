@@ -13,7 +13,7 @@ use std::process::{Command, Stdio};
 use crate::errors::FinaltreeError;
 use crate::fingerprint::{
     compute_fingerprint_tokens, display_path, py_set_eq, sort_pairs, sort_values, DirtyFile,
-    Fingerprint, GeneratedFile, IgnoredFile, TrackedFile, UntrackedFile,
+    DotGitFile, Fingerprint, GeneratedFile, IgnoredFile, TrackedFile, UntrackedFile,
 };
 use crate::intparse::{parse_python_int, py_is_space};
 use crate::jsonvalue::{parse_json, parse_json_lenient, JsonValue};
@@ -446,6 +446,20 @@ fn group_ignored<'a>(entries: &'a [IgnoredFile]) -> Vec<(&'a JsonValue, &'a Json
     groups
 }
 
+fn group_dot_git<'a>(entries: &'a [DotGitFile]) -> Vec<(&'a JsonValue, &'a JsonValue)> {
+    let mut groups: Vec<(&JsonValue, &JsonValue)> = Vec::new();
+    for entry in entries {
+        match groups
+            .iter_mut()
+            .find(|(path, _)| py_set_eq(path, &entry.path))
+        {
+            Some((_, blob)) => *blob = &entry.blob,
+            None => groups.push((&entry.path, &entry.blob)),
+        }
+    }
+    groups
+}
+
 fn group_untracked<'a>(entries: &'a [UntrackedFile]) -> Vec<(&'a JsonValue, &'a JsonValue)> {
     let mut groups: Vec<(&JsonValue, &JsonValue)> = Vec::new();
     for entry in entries {
@@ -529,6 +543,9 @@ fn member_file_paths(fingerprint: &Fingerprint) -> Vec<&JsonValue> {
         paths.push(&entry.path);
     }
     for entry in &fingerprint.ignored {
+        paths.push(&entry.path);
+    }
+    for entry in &fingerprint.dot_git {
         paths.push(&entry.path);
     }
     for entry in &fingerprint.modes {
@@ -718,6 +735,32 @@ pub fn compare_fingerprints(
             (Some(expected_blob), Some(actual_blob)) => {
                 if expected_blob != actual_blob {
                     differences.push(format!("ignored content changed {}", py_str(path)));
+                }
+            }
+            (None, None) => unreachable!(),
+        }
+    }
+    let expected_dot_git = group_dot_git(&expected.dot_git);
+    let actual_dot_git = group_dot_git(&actual.dot_git);
+    let dot_git_paths = union_paths(
+        expected_dot_git.iter().map(|(path, _)| *path),
+        actual_dot_git.iter().map(|(path, _)| *path),
+    );
+    let mut dot_git_sorted = dot_git_paths.clone();
+    sort_values(&mut dot_git_sorted).ok_or_else(decode)?;
+    for path in &dot_git_sorted {
+        let expected_blob = blob_lookup(&expected_dot_git, path);
+        let actual_blob = blob_lookup(&actual_dot_git, path);
+        match (expected_blob, actual_blob) {
+            (Some(_), None) => {
+                differences.push(format!("dot git file removed {}", py_str(path)));
+            }
+            (None, Some(_)) => {
+                differences.push(format!("dot git file added {}", py_str(path)));
+            }
+            (Some(expected_blob), Some(actual_blob)) => {
+                if expected_blob != actual_blob {
+                    differences.push(format!("dot git content changed {}", py_str(path)));
                 }
             }
             (None, None) => unreachable!(),
