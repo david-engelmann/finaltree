@@ -12,4 +12,4 @@ jobs:
       - name: Build the base binary
         run: cargo build --bins
       - name: Run the slice 9 probes
-        run: python3 probes.py ./target/debug/finaltree /tmp/probes-out
+        run: python3 probes.py "$GITHUB_WORKSPACE/target/debug/finaltree" /tmp/probes-out
