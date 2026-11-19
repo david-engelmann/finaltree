@@ -133,12 +133,12 @@ fn test_a_directory_mode_entry_records_its_path_and_mode() {
     write_file(&root, "narrow/deep.txt", "deep\n");
     set_dir_mode(&root, "sub", 0o500);
     set_dir_mode(&root, "sticky", 0o1777);
-    set_dir_mode(&root, "narrow", 0o077);
+    set_dir_mode(&root, "narrow", 0o707);
     let record = fingerprint(&root).to_dict();
     assert_eq!(
         dir_modes_of(&record),
         vec![
-            ("narrow".to_string(), "077".to_string()),
+            ("narrow".to_string(), "707".to_string()),
             ("sticky".to_string(), "1777".to_string()),
             ("sub".to_string(), "500".to_string()),
         ],
