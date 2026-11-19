@@ -309,7 +309,7 @@ fn test_a_directory_at_mode_500_holding_an_untracked_file_fingerprints_whole() {
     write_file(&root, "gen/out.bin", "artifact one\n");
     write_file(&root, "gen/note.txt", "note\n");
     set_dir_mode(&root, "gen", 0o500);
-    let patterns = vec!["gen/*".to_string()];
+    let patterns = vec!["gen/*.bin".to_string()];
     let record = compute_fingerprint(&root, &patterns).expect("the tree fingerprints");
     let dict = record.to_dict();
     assert_eq!(
