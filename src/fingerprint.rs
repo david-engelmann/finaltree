@@ -1109,6 +1109,7 @@ fn read_raw_submodules(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Final
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("submodules") {
         None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
     };
@@ -1151,6 +1152,7 @@ fn read_raw_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeE
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("modes") {
         None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
     };
@@ -1179,6 +1181,7 @@ fn read_raw_ignored(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Finaltre
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("ignored") {
         None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
     };
@@ -1203,6 +1206,7 @@ fn read_raw_dot_git(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Finaltre
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("dot_git") {
         None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
     };
@@ -1228,6 +1232,7 @@ fn read_raw_empty_dirs(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Final
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("empty_dirs") {
         None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
     };
@@ -1260,6 +1265,7 @@ fn read_raw_special(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Finaltre
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("special") {
         None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
     };
@@ -1297,6 +1303,7 @@ fn read_raw_dir_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Finalt
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("dir_modes") {
         None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
     };
@@ -1361,6 +1368,7 @@ fn read_raw_file_modes(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Final
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
     let items = match data.get("file_modes") {
         None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
         Some(JsonValue::List(items)) => items,
         Some(_) => return Err(decode()),
     };
