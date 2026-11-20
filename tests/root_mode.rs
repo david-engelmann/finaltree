@@ -338,14 +338,14 @@ fn test_a_submodules_root_mode_binds_in_its_own_record() {
 fn test_a_root_mode_stands_beside_other_directory_modes() {
     let (_scratch, root) = make_repo("beside");
     write_file(&root, "sub/helper.txt", "helper\n");
-    set_dir_mode(&root, "sub", 0o077);
+    set_dir_mode(&root, "sub", 0o707);
     set_root_mode(&root, 0o500);
     let record = fingerprint(&root).to_dict();
     assert_eq!(
         dir_mode_pairs(&record),
         vec![
             (".".to_string(), "500".to_string()),
-            ("sub".to_string(), "077".to_string()),
+            ("sub".to_string(), "707".to_string()),
         ],
         "the root entry stands first in the member under the standing sort"
     );

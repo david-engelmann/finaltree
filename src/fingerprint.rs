@@ -1569,6 +1569,30 @@ fn generated_files(
     found.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     Ok(found)
 }
+/// The refusal of RF-2 for a directory whose listing
+/// failed. The directory stands named by its relative
+/// path, in the byte form the gathers build their
+/// entries in and read through the standing UTF-8
+/// reading, and the root call, whose stripped form
+/// stands empty, names the tree by its display form
+/// as the standing root refusals name it.
+fn directory_refusal(root: &Path, dir: &Path) -> FinaltreeError {
+    let stripped = dir.strip_prefix(root).unwrap_or(dir);
+    if stripped.as_os_str().is_empty() {
+        return FinaltreeError::new(format!("the tree at {} cannot be read", display_path(root)));
+    }
+    #[cfg(unix)]
+    let relative_bytes = {
+        use std::os::unix::ffi::OsStrExt;
+        stripped.as_os_str().as_bytes().to_vec()
+    };
+    #[cfg(not(unix))]
+    let relative_bytes = stripped.to_string_lossy().into_owned().into_bytes();
+    match require_utf8_path(&relative_bytes) {
+        Ok(relative) => FinaltreeError::new(format!("the directory at {relative} cannot be read")),
+        Err(error) => error,
+    }
+}
 
 fn walk_dir(
     root: &Path,
@@ -1578,7 +1602,7 @@ fn walk_dir(
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
-        Err(_) => return Ok(()),
+        Err(_) => return Err(directory_refusal(root, dir)),
     };
     // Entries are classified as the os.walk reading classifies
     // them. A link naming a folder stands among the folder
@@ -1996,7 +2020,7 @@ fn gather_directories(
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
-        Err(_) => return Ok(()),
+        Err(_) => return Err(directory_refusal(root, dir)),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
         if entry.file_name() == ".git" && dir == root {
@@ -2125,7 +2149,7 @@ fn gather_dir_modes(
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
-        Err(_) => return Ok(()),
+        Err(_) => return Err(directory_refusal(root, dir)),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
         if entry.file_name() == ".git" && dir == root {
@@ -2206,7 +2230,7 @@ fn gather_file_modes(
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
-        Err(_) => return Ok(()),
+        Err(_) => return Err(directory_refusal(root, dir)),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
         if entry.file_name() == ".git" && dir == root {
@@ -2289,7 +2313,7 @@ fn gather_special(
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
-        Err(_) => return Ok(()),
+        Err(_) => return Err(directory_refusal(root, dir)),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
         if entry.file_name() == ".git" && dir == root {
@@ -2421,7 +2445,7 @@ fn gather_dot_git(
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
-        Err(_) => return Ok(()),
+        Err(_) => return Err(directory_refusal(root, dir)),
     };
     for entry in entries.filter_map(|entry| entry.ok()) {
         if entry.file_name() == ".git" && dir == root {
