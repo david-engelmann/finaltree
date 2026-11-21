@@ -12,7 +12,7 @@ The examples folder holds two worked examples with their inputs and captured out
 
 ## Status
 
-- Closed rounds stand at 15 of 100
+- Closed rounds stand at 16 of 100
 - Slice 1 is the seed concept and stands as the concept this repo was created with
 - Slice 2 is built and proven on synthetic fixture repos only
 - Slice 2 computes a fingerprint of a working tree holding the HEAD commit, the tracked files with the git blob hash of their working tree content and of the content staged for them in the index, the untracked files with the git blob hash of their content, the dirty files named as staged or modified or untracked or conflicted, and the generated artifacts matching declared patterns, all under one SHA-256 digest over a canonical serialization, with the members retained beside the digest
