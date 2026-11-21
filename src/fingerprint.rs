@@ -1523,15 +1523,36 @@ fn blob_hash(root: &Path, relative: &str, input: Option<&[u8]>) -> Result<String
     }
 }
 
+/// Whether a failed reading of one entry found nothing
+/// standing at its path, the one failure kind that keeps
+/// the standing negative answer at every reading of a
+/// single entry (EG-2 to EG-4). Every other kind refuses.
+fn nothing_standing(error: &std::io::Error) -> bool {
+    error.kind() == std::io::ErrorKind::NotFound
+}
+
+/// The refusal of EG-2 for a reading of one entry that
+/// failed in a kind other than the nothing standing kind.
+/// The entry stands named by its relative path, as the
+/// directory refusal of RF-2 names its directory.
+fn entry_refusal(relative: &str) -> FinaltreeError {
+    FinaltreeError::new(format!("the entry at {relative} cannot be read"))
+}
+
 /// The blob of what stands at a path, with a link read as itself.
 fn content_blob(root: &Path, relative: &str) -> Result<Option<String>, FinaltreeError> {
     let full = root.join(relative);
-    let link = std::fs::symlink_metadata(&full)
-        .map(|meta| meta.file_type().is_symlink())
-        .unwrap_or(false);
+    let link = match std::fs::symlink_metadata(&full) {
+        Ok(meta) => meta.file_type().is_symlink(),
+        Err(error) if nothing_standing(&error) => false,
+        Err(_) => return Err(entry_refusal(relative)),
+    };
     if link {
-        let target = std::fs::read_link(&full)
-            .map_err(|_| FinaltreeError::new(format!("the path at {relative} cannot be read")))?;
+        let target = match std::fs::read_link(&full) {
+            Ok(target) => target,
+            Err(error) if nothing_standing(&error) => return Ok(None),
+            Err(_) => return Err(entry_refusal(relative)),
+        };
         #[cfg(unix)]
         {
             use std::os::unix::ffi::OsStrExt;
@@ -1543,9 +1564,11 @@ fn content_blob(root: &Path, relative: &str) -> Result<Option<String>, Finaltree
             return blob_hash(root, relative, Some(target.to_string_lossy().as_bytes())).map(Some);
         }
     }
-    let is_file = std::fs::metadata(&full)
-        .map(|meta| meta.is_file())
-        .unwrap_or(false);
+    let is_file = match std::fs::metadata(&full) {
+        Ok(meta) => meta.is_file(),
+        Err(error) if nothing_standing(&error) => false,
+        Err(_) => return Err(entry_refusal(relative)),
+    };
     if is_file {
         return blob_hash(root, relative, None).map(Some);
     }
@@ -1959,7 +1982,7 @@ pub fn compute_fingerprint_tokens(
     }
     untracked.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     let ignored = ignored_files(root, &generated_paths)?;
-    let modes = mode_entries(root, &generated, &untracked, &ignored);
+    let modes = mode_entries(root, &generated, &untracked, &ignored)?;
     let empty_dirs = empty_directories(root)?;
     let special = special_files(root)?;
     let dir_modes = directory_modes(root)?;
@@ -2186,7 +2209,12 @@ fn gather_dir_modes(
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            if let Ok(meta) = std::fs::symlink_metadata(&full) {
+            let meta = match std::fs::symlink_metadata(&full) {
+                Ok(meta) => Some(meta),
+                Err(error) if nothing_standing(&error) => None,
+                Err(_) => return Err(entry_refusal(&relative)),
+            };
+            if let Some(meta) = meta {
                 let bits = meta.permissions().mode() & 0o7777;
                 if !plain_dir_mode(bits) {
                     out.push(DirModeEntry {
@@ -2279,7 +2307,12 @@ fn gather_file_modes(
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            if let Ok(meta) = std::fs::symlink_metadata(&full) {
+            let meta = match std::fs::symlink_metadata(&full) {
+                Ok(meta) => Some(meta),
+                Err(error) if nothing_standing(&error) => None,
+                Err(_) => return Err(entry_refusal(&relative)),
+            };
+            if let Some(meta) = meta {
                 let bits = meta.permissions().mode() & 0o7777;
                 if !plain_file_mode(bits) {
                     out.push(FileModeEntry {
@@ -2510,23 +2543,29 @@ fn gather_dot_git(
 
 /// The mode standing of one file outside the index, in the
 /// git tree spelling, standing absent where the file stands
-/// at the plain standing. The link standing is read from
-/// the link itself and never through it, under the same
-/// reading that gathers the file's blob.
-fn mode_standing(root: &Path, relative: &str) -> Option<&'static str> {
+/// at the plain standing or where nothing stands at its
+/// path, and refusing under EG-4 where its reading is
+/// denied. The link standing is read from the link itself
+/// and never through it, under the same reading that
+/// gathers the file's blob.
+fn mode_standing(root: &Path, relative: &str) -> Result<Option<&'static str>, FinaltreeError> {
     let full = root.join(relative);
-    let meta = std::fs::symlink_metadata(&full).ok()?;
+    let meta = match std::fs::symlink_metadata(&full) {
+        Ok(meta) => meta,
+        Err(error) if nothing_standing(&error) => return Ok(None),
+        Err(_) => return Err(entry_refusal(relative)),
+    };
     if meta.file_type().is_symlink() {
-        return Some("120000");
+        return Ok(Some("120000"));
     }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         if meta.is_file() && meta.permissions().mode() & 0o111 != 0 {
-            return Some("100755");
+            return Ok(Some("100755"));
         }
     }
-    None
+    Ok(None)
 }
 
 /// The mode entries of a tree, one for every untracked or
@@ -2538,7 +2577,7 @@ fn mode_entries(
     generated: &[GeneratedFile],
     untracked: &[UntrackedFile],
     ignored: &[IgnoredFile],
-) -> Vec<ModeEntry> {
+) -> Result<Vec<ModeEntry>, FinaltreeError> {
     let mut seen: Vec<&str> = Vec::new();
     let mut out = Vec::new();
     for path in generated
@@ -2551,7 +2590,7 @@ fn mode_entries(
             continue;
         }
         seen.push(path);
-        if let Some(mode) = mode_standing(root, path) {
+        if let Some(mode) = mode_standing(root, path)? {
             out.push(ModeEntry {
                 path: JsonValue::text(path),
                 mode: JsonValue::text(mode),
@@ -2559,5 +2598,5 @@ fn mode_entries(
         }
     }
     out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
-    out
+    Ok(out)
 }
