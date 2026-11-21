@@ -205,3 +205,128 @@ fn test_a_record_carrying_members_standing_non_empty_reads_and_reemits_whole() {
     assert_eq!(restored.modes.len(), 1);
     assert_eq!(restored.to_dict(), record, "the record re-emits as written");
 }
+
+/// Doctor a genuine record by standing one optional
+/// member present with an empty list and a duplicate
+/// of its first tracked entry standing beside it, the
+/// digest recomputed over the payload as written. The
+/// raw readings run ahead of the duplicate refusal in
+/// the order PORT-4 states, so the decode refusal of
+/// the empty member fires first where it stands.
+fn record_with_empty_member_beside_a_duplicate(record: &JsonValue, member: &str) -> JsonValue {
+    let doctored = record_with_empty_member(record, member);
+    let JsonValue::Object(pairs) = &doctored else {
+        panic!("the record is an object");
+    };
+    let mut payload: Vec<(String, JsonValue)> = Vec::new();
+    let mut patterns = JsonValue::List(Vec::new());
+    for (key, value) in pairs {
+        match key.as_str() {
+            "digest" => {}
+            "generated_patterns" => patterns = value.clone(),
+            _ => payload.push((key.clone(), value.clone())),
+        }
+    }
+    let tracked_at = payload
+        .iter()
+        .position(|(key, _)| key.as_str() == "tracked")
+        .expect("the record carries the tracked member");
+    let first = {
+        let JsonValue::List(tracked) = &payload[tracked_at].1 else {
+            panic!("the tracked member is a list");
+        };
+        tracked.first().expect("a tracked entry stands").clone()
+    };
+    let JsonValue::List(tracked) = &mut payload[tracked_at].1 else {
+        panic!("the tracked member is a list");
+    };
+    tracked.push(first);
+    let digest = sha256_hex(render_compact(&JsonValue::Object(payload.clone())).as_bytes());
+    let mut out = payload;
+    out.push(("digest".to_string(), JsonValue::text(digest)));
+    out.push(("generated_patterns".to_string(), patterns));
+    JsonValue::Object(out)
+}
+
+/// Doctor a genuine record by standing one optional
+/// member present with an empty list while the genuine
+/// digest stands unrecomputed over the payload as
+/// written. The raw readings run ahead of the digest
+/// comparison in the order PORT-4 states, so the decode
+/// refusal of the empty member fires first where it
+/// stands.
+fn record_with_empty_member_beside_a_stale_digest(record: &JsonValue, member: &str) -> JsonValue {
+    let JsonValue::Object(pairs) = record else {
+        panic!("the record is an object");
+    };
+    let mut payload: Vec<(String, JsonValue)> = Vec::new();
+    let mut patterns = JsonValue::List(Vec::new());
+    let mut digest = JsonValue::Null;
+    for (key, value) in pairs {
+        match key.as_str() {
+            "digest" => digest = value.clone(),
+            "generated_patterns" => patterns = value.clone(),
+            _ => payload.push((key.clone(), value.clone())),
+        }
+    }
+    let untracked_at = payload
+        .iter()
+        .position(|(key, _)| key.as_str() == "untracked")
+        .expect("the record carries the untracked member");
+    payload.insert(
+        untracked_at + 1,
+        (member.to_string(), JsonValue::List(Vec::new())),
+    );
+    let mut doctored = payload;
+    doctored.push(("digest".to_string(), digest));
+    doctored.push(("generated_patterns".to_string(), patterns));
+    JsonValue::Object(doctored)
+}
+
+#[test]
+fn test_a_record_carrying_an_empty_member_beside_a_duplicate_refuses_in_the_decode_sentence() {
+    let (_scratch, root) = make_repo("riderduplicate");
+    let record = fingerprint(&root).to_dict();
+    let doctored = record_with_empty_member_beside_a_duplicate(&record, "modes");
+    let error = Fingerprint::from_dict(&doctored).expect_err("the doctored record refuses");
+    assert_eq!(error.to_string(), "the fingerprint record does not decode");
+}
+
+#[test]
+fn test_a_record_carrying_an_empty_member_beside_a_stale_digest_refuses_in_the_decode_sentence() {
+    let (_scratch, root) = make_repo("riderstale");
+    let record = fingerprint(&root).to_dict();
+    let doctored = record_with_empty_member_beside_a_stale_digest(&record, "modes");
+    let error = Fingerprint::from_dict(&doctored).expect_err("the doctored record refuses");
+    assert_eq!(error.to_string(), "the fingerprint record does not decode");
+}
+
+#[test]
+fn test_the_verify_door_refuses_a_stamped_log_carrying_an_empty_member_beside_a_stale_digest() {
+    let (scratch, root) = make_repo("riderdoor");
+    let log = scratch.0.join("stamped.log");
+    let code = run_and_stamp(&root, &["true".to_string()], &log, &[]).expect("the stamp runs");
+    assert_eq!(code, 0);
+    let stamped = verify_stamped_log(&log, &root, None).expect("the verify runs");
+    assert!(stamped.matched, "the log verifies against its own tree");
+    let record = fingerprint(&root).to_dict();
+    let doctored = record_with_empty_member_beside_a_stale_digest(&record, "modes");
+    let Some(JsonValue::Text(digest)) = doctored.get("digest") else {
+        panic!("the doctored record carries its digest as a text");
+    };
+    let text = std::fs::read_to_string(&log).expect("the log stands");
+    let mut lines: Vec<String> = Vec::new();
+    for line in text.split('\n') {
+        if line.starts_with("fingerprint-json ") {
+            lines.push(format!("fingerprint-json {}", render_compact(&doctored)));
+        } else if line.starts_with("fingerprint ") {
+            lines.push(format!("fingerprint {digest}"));
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+    let doctored_log = scratch.0.join("doctored.log");
+    std::fs::write(&doctored_log, lines.join("\n")).expect("the doctored log is written");
+    let error = verify_stamped_log(&doctored_log, &root, None).expect_err("the verify refuses");
+    assert_eq!(error.to_string(), "the fingerprint record does not decode");
+}
