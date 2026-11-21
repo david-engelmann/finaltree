@@ -234,6 +234,12 @@ fn members_payload(fingerprint: &Fingerprint) -> JsonValue {
         let _ = sort_raw(&mut submodules, &["path"]);
         pairs.push(("submodules", JsonValue::List(submodules)));
     }
+    if !fingerprint.embedded.is_empty() {
+        let mut embedded: Vec<JsonValue> =
+            fingerprint.embedded.iter().map(embedded_entry).collect();
+        let _ = sort_raw(&mut embedded, &["path"]);
+        pairs.push(("embedded", JsonValue::List(embedded)));
+    }
     if !fingerprint.modes.is_empty() {
         let mut modes: Vec<JsonValue> = fingerprint.modes.iter().map(mode_entry).collect();
         let _ = sort_raw(&mut modes, &["path"]);
@@ -306,6 +312,14 @@ fn submodule_entry(entry: &SubmoduleEntry) -> JsonValue {
     JsonValue::object(vec![
         ("path", entry.path.clone()),
         ("index_commit", entry.index_commit.clone()),
+        ("head", entry.head.clone()),
+        ("digest", entry.digest.clone()),
+    ])
+}
+
+fn embedded_entry(entry: &EmbeddedEntry) -> JsonValue {
+    JsonValue::object(vec![
+        ("path", entry.path.clone()),
         ("head", entry.head.clone()),
         ("digest", entry.digest.clone()),
     ])
@@ -758,6 +772,7 @@ pub struct Fingerprint {
     pub untracked: Vec<UntrackedFile>,
     pub generated_patterns: Vec<JsonValue>,
     pub submodules: Vec<SubmoduleEntry>,
+    pub embedded: Vec<EmbeddedEntry>,
     pub modes: Vec<ModeEntry>,
     pub ignored: Vec<IgnoredFile>,
     pub empty_dirs: Vec<JsonValue>,
@@ -776,6 +791,19 @@ pub struct Fingerprint {
 pub struct SubmoduleEntry {
     pub path: JsonValue,
     pub index_commit: JsonValue,
+    pub head: JsonValue,
+    pub digest: JsonValue,
+}
+
+/// One embedded repository of the tree, a directory
+/// standing below the root that is itself the top level
+/// of a working tree while standing in no gitlink, the
+/// commit it stands at and the digest of its own
+/// fingerprint, the head and the digest standing null
+/// where the repository holds no commit.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EmbeddedEntry {
+    pub path: JsonValue,
     pub head: JsonValue,
     pub digest: JsonValue,
 }
@@ -987,6 +1015,7 @@ impl Fingerprint {
             untracked: raw_untracked.iter().map(member_untracked).collect(),
             generated_patterns: patterns_raw,
             submodules: raw_submodules.iter().map(member_submodule).collect(),
+            embedded: Vec::new(),
             modes: raw_modes.iter().map(member_mode).collect(),
             ignored: raw_ignored.iter().map(member_ignored).collect(),
             empty_dirs: raw_empty_dirs,
@@ -1578,6 +1607,7 @@ fn content_blob(root: &Path, relative: &str) -> Result<Option<String>, Finaltree
 fn generated_files(
     root: &Path,
     patterns: &[Vec<glob::Token>],
+    embedded: &std::collections::BTreeSet<String>,
 ) -> Result<Vec<GeneratedFile>, FinaltreeError> {
     if patterns.is_empty() {
         return Ok(Vec::new());
@@ -1596,7 +1626,11 @@ fn generated_files(
         ));
     }
     let mut found = Vec::new();
-    walk_dir(root, root, &compiled, &mut found)?;
+    let boundary: std::collections::BTreeSet<PathBuf> = embedded
+        .iter()
+        .map(|relative| root.join(relative))
+        .collect();
+    walk_dir(root, root, &compiled, &boundary, &mut found)?;
     found.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     Ok(found)
 }
@@ -1629,6 +1663,7 @@ fn walk_dir(
     root: &Path,
     dir: &Path,
     compiled: &[glob::Pattern],
+    boundary: &std::collections::BTreeSet<PathBuf>,
     found: &mut Vec<GeneratedFile>,
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
@@ -1728,7 +1763,13 @@ fn walk_dir(
         }
     }
     for (_, path, _, _) in &dirnames {
-        walk_dir(root, path, compiled, found)?;
+        // A directory the detection names as an embedded
+        // repository is never descended into, its files
+        // binding through its digest under EB-4.
+        if boundary.contains(path) {
+            continue;
+        }
+        walk_dir(root, path, compiled, boundary, found)?;
     }
     Ok(())
 }
@@ -1815,6 +1856,91 @@ fn gitlinks(root: &Path) -> Result<Vec<(String, String)>, FinaltreeError> {
     Ok(out)
 }
 
+/// The embedded repositories of a tree, the directories
+/// standing below the root that are themselves the top
+/// level of a working tree while standing in no gitlink,
+/// as the set of their relative path texts (EB-3). The
+/// reading walks the tree itself in the form the gathers
+/// take, testing every directory standing as itself on
+/// the two part test the submodule reading runs for a
+/// checkout, a .git entry standing inside the directory
+/// and the git reading standing at the directory
+/// returning the directory itself as its top level. The
+/// walk never names the root itself, never descends into
+/// a gitlink path, and never descends into a repository
+/// it has named.
+fn embedded_repositories(
+    root: &Path,
+) -> Result<std::collections::BTreeSet<String>, FinaltreeError> {
+    let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
+        .into_iter()
+        .map(|(relative, _)| relative)
+        .collect();
+    let mut out = std::collections::BTreeSet::new();
+    gather_embedded(root, root, &gitlinks, &mut out)?;
+    Ok(out)
+}
+
+fn gather_embedded(
+    root: &Path,
+    dir: &Path,
+    gitlinks: &std::collections::BTreeSet<String>,
+    out: &mut std::collections::BTreeSet<String>,
+) -> Result<(), FinaltreeError> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return Err(directory_refusal(root, dir)),
+    };
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        if entry.file_name() == ".git" && dir == root {
+            continue;
+        }
+        let file_type = match entry.file_type() {
+            Ok(kind) => kind,
+            Err(_) => continue,
+        };
+        if !file_type.is_dir() {
+            continue;
+        }
+        let full = entry.path();
+        let stripped = match full.strip_prefix(root) {
+            Ok(stripped) => stripped,
+            Err(_) => continue,
+        };
+        #[cfg(unix)]
+        let relative_bytes = {
+            use std::os::unix::ffi::OsStrExt;
+            stripped.as_os_str().as_bytes().to_vec()
+        };
+        #[cfg(not(unix))]
+        let relative_bytes = stripped.to_string_lossy().into_owned().into_bytes();
+        let relative = require_utf8_path(&relative_bytes)?;
+        // A gitlink path is neither named nor descended
+        // into, its checkout standing in the submodules
+        // member alone.
+        if gitlinks.contains(&relative) {
+            continue;
+        }
+        if std::fs::symlink_metadata(full.join(".git")).is_ok() {
+            let top = git_output(&full, &["rev-parse", "--show-toplevel"]).ok();
+            let itself = match top {
+                Some(bytes) => {
+                    let top_path =
+                        PathBuf::from(std::ffi::OsString::from_vec(bytes.trim_ascii().to_vec()));
+                    std::fs::canonicalize(&top_path).ok() == std::fs::canonicalize(&full).ok()
+                }
+                None => false,
+            };
+            if itself {
+                out.insert(relative);
+                continue;
+            }
+        }
+        gather_embedded(root, &full, gitlinks, out)?;
+    }
+    Ok(())
+}
+
 /// The submodule entries of a tree, one per gitlink, under
 /// SUB-3. A submodule stands checked out where the directory
 /// at its path is itself the top level of a working tree,
@@ -1849,6 +1975,43 @@ fn submodule_entries(root: &Path) -> Result<Vec<SubmoduleEntry>, FinaltreeError>
         out.push(SubmoduleEntry {
             path: JsonValue::text(relative),
             index_commit: JsonValue::text(index_commit),
+            head,
+            digest,
+        });
+    }
+    Ok(out)
+}
+
+/// The embedded entries of a tree, one per repository
+/// the detection reading names, under EB-2. The head is
+/// the commit the git reading returns standing at the
+/// path, and the digest is the repository its own
+/// fingerprint computed standing there with no declared
+/// patterns, so the digest of the tree binds the state
+/// of every repository below it. A repository holding
+/// no commit stands with its head null and its digest
+/// null, on the form SUB-2 settles for a head that does
+/// not stand, a failed head reading standing as that
+/// standing.
+fn embedded_entries(
+    root: &Path,
+    embedded: &std::collections::BTreeSet<String>,
+) -> Result<Vec<EmbeddedEntry>, FinaltreeError> {
+    let mut out = Vec::new();
+    for relative in embedded {
+        let full = root.join(relative);
+        let (head, digest) = match git_text(&full, &["rev-parse", "HEAD"]) {
+            Ok(text) => {
+                let own = compute_fingerprint_tokens(&full, &[])?;
+                (
+                    JsonValue::text(text.trim().to_string()),
+                    JsonValue::text(own.digest()),
+                )
+            }
+            Err(_) => (JsonValue::Null, JsonValue::Null),
+        };
+        out.push(EmbeddedEntry {
+            path: JsonValue::text(relative.clone()),
             head,
             digest,
         });
@@ -1936,7 +2099,8 @@ pub fn compute_fingerprint_tokens(
                 .collect(),
         });
     }
-    let generated = generated_files(root, &patterns)?;
+    let embedded = embedded_repositories(root)?;
+    let generated = generated_files(root, &patterns, &embedded)?;
     let generated_paths: std::collections::BTreeSet<&str> =
         generated.iter().map(|entry| as_text(&entry.path)).collect();
     let mut dirty: std::collections::BTreeSet<(String, String)> = std::collections::BTreeSet::new();
@@ -1960,6 +2124,12 @@ pub fn compute_fingerprint_tokens(
         let raw_path: &[u8] = if raw.len() > 3 { &raw[3..] } else { &[] };
         let relative = require_utf8_path(raw_path)?;
         if code_x == '?' && code_y == '?' {
+            // The whole directory entry of a repository the
+            // detection names stands in the embedded member
+            // alone, no untracked or dirty entry for it (EB-4).
+            if embedded.contains(relative.trim_end_matches('/')) {
+                continue;
+            }
             if !generated_paths.contains(relative.as_str()) {
                 dirty.insert((relative.clone(), "untracked".to_string()));
                 untracked.push(UntrackedFile {
@@ -1983,11 +2153,11 @@ pub fn compute_fingerprint_tokens(
     untracked.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     let ignored = ignored_files(root, &generated_paths)?;
     let modes = mode_entries(root, &generated, &untracked, &ignored)?;
-    let empty_dirs = empty_directories(root)?;
-    let special = special_files(root)?;
-    let dir_modes = directory_modes(root)?;
-    let file_modes = file_permissions(root)?;
-    let dot_git = dot_git_files(root)?;
+    let empty_dirs = empty_directories(root, &embedded)?;
+    let special = special_files(root, &embedded)?;
+    let dir_modes = directory_modes(root, &embedded)?;
+    let file_modes = file_permissions(root, &embedded)?;
+    let dot_git = dot_git_files(root, &embedded)?;
     Ok(Fingerprint {
         commit: JsonValue::text(commit),
         tracked,
@@ -2005,6 +2175,7 @@ pub fn compute_fingerprint_tokens(
             .map(|tokens| pattern_record(tokens))
             .collect(),
         submodules: submodule_entries(root)?,
+        embedded: embedded_entries(root, &embedded)?,
         modes,
         ignored,
         empty_dirs,
@@ -2025,14 +2196,24 @@ pub fn compute_fingerprint_tokens(
 /// checkout, a directory standing at a gitlink path standing
 /// named nowhere in this member, and the ignore rules reach
 /// no part of it.
-fn empty_directories(root: &Path) -> Result<Vec<JsonValue>, FinaltreeError> {
+fn empty_directories(
+    root: &Path,
+    embedded: &std::collections::BTreeSet<String>,
+) -> Result<Vec<JsonValue>, FinaltreeError> {
     let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
         .into_iter()
         .map(|(relative, _)| relative)
         .collect();
     let mut directories: Vec<String> = Vec::new();
     let mut holds_entry: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-    gather_directories(root, root, &gitlinks, &mut directories, &mut holds_entry)?;
+    gather_directories(
+        root,
+        root,
+        &gitlinks,
+        embedded,
+        &mut directories,
+        &mut holds_entry,
+    )?;
     let mut out: Vec<JsonValue> = directories
         .into_iter()
         .filter(|relative| !holds_entry.contains(relative))
@@ -2046,6 +2227,7 @@ fn gather_directories(
     root: &Path,
     dir: &Path,
     gitlinks: &std::collections::BTreeSet<String>,
+    embedded: &std::collections::BTreeSet<String>,
     directories: &mut Vec<String>,
     holds_entry: &mut std::collections::BTreeSet<String>,
 ) -> Result<(), FinaltreeError> {
@@ -2077,12 +2259,13 @@ fn gather_directories(
         if file_type.is_dir() {
             // A directory standing as itself. A gitlink path is
             // neither named nor descended into, its interior
-            // standing in the submodule's own fingerprint.
-            if gitlinks.contains(&relative) {
+            // standing in the submodule's own fingerprint, and
+            // an embedded repository stands the same under EB-4.
+            if gitlinks.contains(&relative) || embedded.contains(&relative) {
                 continue;
             }
             directories.push(relative);
-            gather_directories(root, &full, gitlinks, directories, holds_entry)?;
+            gather_directories(root, &full, gitlinks, embedded, directories, holds_entry)?;
         } else {
             // An entry that is not a directory standing as
             // itself, a file or a link of any standing. Every
@@ -2148,7 +2331,10 @@ fn parse_dir_mode(spelling: &str) -> Option<u32> {
 /// standing to be read and not entered, and the ignore
 /// rules reach no part of it. The reading reads the root
 /// itself beside the directories below it (RM-3).
-fn directory_modes(root: &Path) -> Result<Vec<DirModeEntry>, FinaltreeError> {
+fn directory_modes(
+    root: &Path,
+    embedded: &std::collections::BTreeSet<String>,
+) -> Result<Vec<DirModeEntry>, FinaltreeError> {
     let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
         .into_iter()
         .map(|(relative, _)| relative)
@@ -2167,7 +2353,7 @@ fn directory_modes(root: &Path) -> Result<Vec<DirModeEntry>, FinaltreeError> {
             }
         }
     }
-    gather_dir_modes(root, root, &gitlinks, &mut out)?;
+    gather_dir_modes(root, root, &gitlinks, embedded, &mut out)?;
     out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     Ok(out)
 }
@@ -2176,6 +2362,7 @@ fn gather_dir_modes(
     root: &Path,
     dir: &Path,
     gitlinks: &std::collections::BTreeSet<String>,
+    embedded: &std::collections::BTreeSet<String>,
     out: &mut Vec<DirModeEntry>,
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
@@ -2227,10 +2414,12 @@ fn gather_dir_modes(
         // A gitlink path is never descended into, its interior
         // standing in the submodule's own fingerprint. Its own
         // mode stands recorded above, in the parent's record.
-        if gitlinks.contains(&relative) {
+        // An embedded repository stands the same under EB-4,
+        // its own mode standing recorded above in the same way.
+        if gitlinks.contains(&relative) || embedded.contains(&relative) {
             continue;
         }
-        gather_dir_modes(root, &full, gitlinks, out)?;
+        gather_dir_modes(root, &full, gitlinks, embedded, out)?;
     }
     Ok(())
 }
@@ -2247,13 +2436,16 @@ fn gather_dir_modes(
 /// only stand in
 /// the member, a link standing and a special standing
 /// standing outside it under the members that carry them.
-fn file_permissions(root: &Path) -> Result<Vec<FileModeEntry>, FinaltreeError> {
+fn file_permissions(
+    root: &Path,
+    embedded: &std::collections::BTreeSet<String>,
+) -> Result<Vec<FileModeEntry>, FinaltreeError> {
     let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
         .into_iter()
         .map(|(relative, _)| relative)
         .collect();
     let mut out = Vec::new();
-    gather_file_modes(root, root, &gitlinks, &mut out)?;
+    gather_file_modes(root, root, &gitlinks, embedded, &mut out)?;
     out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     Ok(out)
 }
@@ -2262,6 +2454,7 @@ fn gather_file_modes(
     root: &Path,
     dir: &Path,
     gitlinks: &std::collections::BTreeSet<String>,
+    embedded: &std::collections::BTreeSet<String>,
     out: &mut Vec<FileModeEntry>,
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
@@ -2293,10 +2486,10 @@ fn gather_file_modes(
             // A directory standing as itself. A gitlink path is
             // never descended into, its interior standing in
             // the submodule's own fingerprint.
-            if gitlinks.contains(&relative) {
+            if gitlinks.contains(&relative) || embedded.contains(&relative) {
                 continue;
             }
-            gather_file_modes(root, &full, gitlinks, out)?;
+            gather_file_modes(root, &full, gitlinks, embedded, out)?;
             continue;
         }
         if !file_type.is_file() {
@@ -2335,13 +2528,16 @@ fn gather_file_modes(
 /// The walk never enters the .git folder standing at the
 /// root and never enters the interior of a submodule's
 /// checkout, and the ignore rules reach no part of it.
-fn special_files(root: &Path) -> Result<Vec<SpecialFile>, FinaltreeError> {
+fn special_files(
+    root: &Path,
+    embedded: &std::collections::BTreeSet<String>,
+) -> Result<Vec<SpecialFile>, FinaltreeError> {
     let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
         .into_iter()
         .map(|(relative, _)| relative)
         .collect();
     let mut out = Vec::new();
-    gather_special(root, root, &gitlinks, &mut out)?;
+    gather_special(root, root, &gitlinks, embedded, &mut out)?;
     out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     Ok(out)
 }
@@ -2350,6 +2546,7 @@ fn gather_special(
     root: &Path,
     dir: &Path,
     gitlinks: &std::collections::BTreeSet<String>,
+    embedded: &std::collections::BTreeSet<String>,
     out: &mut Vec<SpecialFile>,
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
@@ -2381,10 +2578,10 @@ fn gather_special(
             // A directory standing as itself. A gitlink path is
             // never descended into, its interior standing in the
             // submodule's own fingerprint.
-            if gitlinks.contains(&relative) {
+            if gitlinks.contains(&relative) || embedded.contains(&relative) {
                 continue;
             }
-            gather_special(root, &full, gitlinks, out)?;
+            gather_special(root, &full, gitlinks, embedded, out)?;
             continue;
         }
         if file_type.is_file() || file_type.is_symlink() {
@@ -2467,13 +2664,16 @@ fn ignored_files(
 /// enters the .git folder standing at the root and never
 /// enters the interior of a submodule's checkout, and the
 /// ignore rules reach no part of it.
-fn dot_git_files(root: &Path) -> Result<Vec<DotGitFile>, FinaltreeError> {
+fn dot_git_files(
+    root: &Path,
+    embedded: &std::collections::BTreeSet<String>,
+) -> Result<Vec<DotGitFile>, FinaltreeError> {
     let gitlinks: std::collections::BTreeSet<String> = gitlinks(root)?
         .into_iter()
         .map(|(relative, _)| relative)
         .collect();
     let mut out = Vec::new();
-    gather_dot_git(root, root, &gitlinks, &mut out)?;
+    gather_dot_git(root, root, &gitlinks, embedded, &mut out)?;
     out.sort_by(|a, b| as_text(&a.path).cmp(as_text(&b.path)));
     Ok(out)
 }
@@ -2482,6 +2682,7 @@ fn gather_dot_git(
     root: &Path,
     dir: &Path,
     gitlinks: &std::collections::BTreeSet<String>,
+    embedded: &std::collections::BTreeSet<String>,
     out: &mut Vec<DotGitFile>,
 ) -> Result<(), FinaltreeError> {
     let entries = match std::fs::read_dir(dir) {
@@ -2515,10 +2716,10 @@ fn gather_dot_git(
             // like any directory. A gitlink path is never
             // descended into, its interior standing in the
             // submodule's own fingerprint.
-            if gitlinks.contains(&relative) {
+            if gitlinks.contains(&relative) || embedded.contains(&relative) {
                 continue;
             }
-            gather_dot_git(root, &full, gitlinks, out)?;
+            gather_dot_git(root, &full, gitlinks, embedded, out)?;
             continue;
         }
         if !file_type.is_file() && !file_type.is_symlink() {
