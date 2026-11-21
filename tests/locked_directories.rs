@@ -97,6 +97,31 @@ fn cannot_list(path: &Path) -> bool {
     std::fs::read_dir(path).is_err()
 }
 
+/// Whether the test process itself cannot reach the
+/// entry standing at the path, the guard of EG-8.
+/// Where the suite runs as a user the permission bits
+/// do not bind, the entry stands reachable and the
+/// guarded pins assert nothing.
+fn cannot_reach(path: &Path) -> bool {
+    std::fs::symlink_metadata(path).is_err()
+}
+
+/// The mode a member of the record carries for a path.
+fn member_mode(record: &JsonValue, member: &str, wanted: &str) -> String {
+    let Some(JsonValue::List(items)) = record.get(member) else {
+        panic!("the member stands");
+    };
+    for entry in items {
+        if matches!(entry.get("path"), Some(JsonValue::Text(path)) if path == wanted) {
+            let JsonValue::Text(mode) = entry.get("mode").expect("the mode stands") else {
+                panic!("the mode is a text");
+            };
+            return mode.clone();
+        }
+    }
+    panic!("the entry stands");
+}
+
 /// The computation over the tree refuses with the
 /// expected sentence of RF-2.
 fn assert_refusal(root: &Path, patterns: &[String], expected: &str) {
@@ -115,6 +140,24 @@ fn member_paths(record: &JsonValue, member: &str) -> Vec<String> {
         .map(|entry| {
             let JsonValue::Text(path) = entry.get("path").expect("the path stands") else {
                 panic!("the path is a text");
+            };
+            path.clone()
+        })
+        .collect()
+}
+
+/// The texts a member of the record carries, in the
+/// order the record carries them, for a member whose
+/// entries stand as bare texts rather than as objects.
+fn member_texts(record: &JsonValue, member: &str) -> Vec<String> {
+    let Some(JsonValue::List(items)) = record.get(member) else {
+        return Vec::new();
+    };
+    items
+        .iter()
+        .map(|entry| {
+            let JsonValue::Text(path) = entry else {
+                panic!("the entry is a text");
             };
             path.clone()
         })
@@ -245,7 +288,7 @@ fn test_a_locked_directory_holding_a_tracked_file_refuses() {
     write_file(&root, "locked/tracked.txt", "tracked again\n");
     set_dir_mode(&root, "locked", 0o000);
     if cannot_list(&root.join("locked")) {
-        assert_refusal(&root, &[], "the directory at locked cannot be read");
+        assert_refusal(&root, &[], "the entry at locked/tracked.txt cannot be read");
     }
     set_dir_mode(&root, "locked", 0o755);
 }
@@ -336,21 +379,18 @@ fn test_a_directory_at_mode_500_holding_an_untracked_file_fingerprints_whole() {
 }
 
 #[test]
-fn test_a_directory_at_mode_444_holding_a_tracked_file_fingerprints_without_refusal() {
+fn test_a_directory_at_mode_444_holding_a_tracked_file_refuses() {
     let (_scratch, root) = make_repo("grain");
     write_file(&root, "locked/tracked.txt", "tracked\n");
     git(&root, &["add", "."]);
     git(&root, &["commit", "-q", "-m", "tracked"]);
     write_file(&root, "locked/tracked.txt", "tracked again\n");
     set_dir_mode(&root, "locked", 0o444);
-    let result = compute_fingerprint(&root, &[]);
-    assert!(
-        result.is_ok(),
-        "the computation completes without the directory refusal"
-    );
+    if cannot_reach(&root.join("locked/tracked.txt")) {
+        assert_refusal(&root, &[], "the entry at locked/tracked.txt cannot be read");
+    }
     set_dir_mode(&root, "locked", 0o755);
 }
-
 #[test]
 fn test_a_root_at_mode_000_refuses_at_the_git_door() {
     let (_scratch, root) = make_repo("rootfence");
@@ -363,4 +403,110 @@ fn test_a_root_at_mode_000_refuses_at_the_git_door() {
         assert_refusal(&root, &[], &expected);
     }
     set_root_mode(&root, 0o755);
+}
+
+#[test]
+fn test_a_directory_at_mode_444_holding_an_untracked_file_refuses() {
+    let (_scratch, root) = make_repo("grainuntracked");
+    write_file(&root, "locked/loose.txt", "loose\n");
+    set_dir_mode(&root, "locked", 0o444);
+    if cannot_reach(&root.join("locked/loose.txt")) {
+        assert_refusal(&root, &[], "the entry at locked/loose.txt cannot be read");
+    }
+    set_dir_mode(&root, "locked", 0o755);
+}
+
+#[test]
+fn test_a_directory_at_mode_444_holding_an_ignored_file_refuses() {
+    let (_scratch, root) = make_repo("grainignored");
+    write_file(&root, ".gitignore", "ignored.bin\n");
+    git(&root, &["add", "."]);
+    git(&root, &["commit", "-q", "-m", "ignore"]);
+    write_file(&root, "locked/ignored.bin", "ignored\n");
+    set_dir_mode(&root, "locked", 0o444);
+    if cannot_reach(&root.join("locked/ignored.bin")) {
+        assert_refusal(&root, &[], "the entry at locked/ignored.bin cannot be read");
+    }
+    set_dir_mode(&root, "locked", 0o755);
+}
+
+#[test]
+fn test_a_directory_at_mode_444_holding_a_generated_artifact_refuses() {
+    let (_scratch, root) = make_repo("graingenerated");
+    write_file(&root, "locked/out.bin", "artifact\n");
+    set_dir_mode(&root, "locked", 0o444);
+    if cannot_reach(&root.join("locked/out.bin")) {
+        assert_refusal(
+            &root,
+            &["locked/*.bin".to_string()],
+            "the entry at locked/out.bin cannot be read",
+        );
+    }
+    set_dir_mode(&root, "locked", 0o755);
+}
+
+#[test]
+fn test_a_tracked_file_removed_from_a_searchable_tree_keeps_its_null_blob() {
+    let (_scratch, root) = make_repo("removed");
+    write_file(&root, "held.txt", "held\n");
+    git(&root, &["add", "."]);
+    git(&root, &["commit", "-q", "-m", "held"]);
+    std::fs::remove_file(root.join("held.txt")).expect("the file is removed");
+    let record = compute_fingerprint(&root, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    let Some(JsonValue::List(tracked)) = dict.get("tracked") else {
+        panic!("the tracked member stands");
+    };
+    let held = tracked
+        .iter()
+        .find(
+            |entry| matches!(entry.get("path"), Some(JsonValue::Text(path)) if path == "held.txt"),
+        )
+        .expect("the tracked entry stands");
+    assert!(
+        matches!(held.get("blob"), Some(JsonValue::Null)),
+        "the removed file keeps its null blob"
+    );
+    assert_eq!(
+        member_paths(&dict, "dirty"),
+        vec!["held.txt".to_string()],
+        "the dirty member names the removed file"
+    );
+}
+
+#[test]
+fn test_a_directory_at_mode_444_standing_empty_fingerprints_whole() {
+    let (_scratch, root) = make_repo("grainempty");
+    std::fs::create_dir_all(root.join("locked")).expect("the directory stands");
+    set_dir_mode(&root, "locked", 0o444);
+    let record = compute_fingerprint(&root, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    assert_eq!(
+        member_texts(&dict, "empty_dirs"),
+        vec!["locked".to_string()],
+        "the empty directory stands named in the empty_dirs member"
+    );
+    assert_eq!(
+        member_mode(&dict, "dir_modes", "locked"),
+        "444",
+        "the directory stands bound at its mode"
+    );
+    set_dir_mode(&root, "locked", 0o755);
+}
+
+#[test]
+fn test_a_directory_at_mode_500_holding_tracked_files_fingerprints_whole() {
+    let (_scratch, root) = make_repo("grainsearch");
+    write_file(&root, "held/tracked.txt", "tracked\n");
+    git(&root, &["add", "."]);
+    git(&root, &["commit", "-q", "-m", "tracked"]);
+    set_dir_mode(&root, "held", 0o500);
+    let record = compute_fingerprint(&root, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    let blob = member_blob(&dict, "tracked", "held/tracked.txt");
+    assert!(
+        !blob.is_empty(),
+        "the tracked file under a searchable directory stands bound by its blob"
+    );
+    set_dir_mode(&root, "held", 0o755);
 }
