@@ -728,3 +728,238 @@ fn test_an_interior_change_in_a_null_form_repository_names_no_embedded_differenc
         "no difference stands named, {differences:?}"
     );
 }
+
+/// Set the mode of a fixture path, one of the two
+/// fixture steps the pins of this slice add, the mode
+/// step and the fifo step standing in no helper of
+/// this file before this slice.
+fn set_mode(path: &Path, mode: u32) {
+    use std::os::unix::fs::PermissionsExt;
+    let mut permissions = fs::metadata(path).expect("the path stands").permissions();
+    permissions.set_mode(mode);
+    fs::set_permissions(path, permissions).expect("the mode stands");
+}
+
+/// Stand a fifo at a fixture path, the second of the
+/// two fixture steps the pins of this slice add.
+fn make_fifo(root: &Path, relative: &str) {
+    let full = root.join(relative);
+    if let Some(parent) = full.parent() {
+        fs::create_dir_all(parent).expect("the parent stands");
+    }
+    let status = Command::new("mkfifo")
+        .arg(&full)
+        .status()
+        .expect("mkfifo runs");
+    assert!(status.success(), "the pipe stands");
+}
+
+/// Every path a record names outside the embedded
+/// member, standing with the name of the member that
+/// names it. The empty directories member carries its
+/// paths as plain texts and every other member carries
+/// its paths in its entries. The declared patterns
+/// stand as the caller its words and not as standings
+/// of the tree, so the sweep passes that member by with
+/// the embedded member itself.
+fn record_paths_by_member(record: &JsonValue) -> Vec<(String, String)> {
+    let JsonValue::Object(pairs) = record else {
+        panic!("the record is an object");
+    };
+    let mut found = Vec::new();
+    for (key, value) in pairs {
+        if key.as_str() == "embedded" || key.as_str() == "generated_patterns" {
+            continue;
+        }
+        let JsonValue::List(items) = value else {
+            continue;
+        };
+        for item in items {
+            if let Some(text) = item.as_text() {
+                found.push((key.clone(), text.to_string()));
+            } else if let Some(path) = item.get("path").and_then(JsonValue::as_text) {
+                found.push((key.clone(), path.to_string()));
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn test_a_declared_pattern_reaches_no_file_inside_an_embedded_repository() {
+    let (_scratch, main) = make_tree_with_embedded("pattern-boundary");
+    write_file(&main, "out/artifact.bin", "outside\n");
+    write_file(&main.join("emb"), "artifact.bin", "inside\n");
+    let patterns = vec![
+        "out/*.bin".to_string(),
+        "emb/*.bin".to_string(),
+        "emb/f.txt".to_string(),
+    ];
+    let record = compute_fingerprint(&main, &patterns).expect("the tree fingerprints");
+    let generated = member_paths(&record.to_dict(), "generated");
+    assert_eq!(
+        generated,
+        vec!["out/artifact.bin".to_string()],
+        "the generated member carries the outside artifact alone"
+    );
+}
+
+#[test]
+fn test_files_inside_an_embedded_repository_stand_in_neither_the_modes_nor_the_file_modes_member() {
+    let (_scratch, main) = make_tree_with_embedded("interior-modes");
+    let emb = main.join("emb");
+    let tool = write_file(&emb, "tool.sh", "tool\n");
+    set_mode(&tool, 0o755);
+    let wide = write_file(&emb, "wide.txt", "wide\n");
+    set_mode(&wide, 0o777);
+    let plain_tool = write_file(&main, "plain/tool.sh", "tool\n");
+    set_mode(&plain_tool, 0o755);
+    let plain_wide = write_file(&main, "plain/wide.txt", "wide\n");
+    set_mode(&plain_wide, 0o777);
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    assert!(
+        !embedded_entries(&dict).is_empty(),
+        "the member stands for the repository"
+    );
+    assert!(
+        member_paths(&dict, "modes")
+            .iter()
+            .any(|path| path == "plain/tool.sh"),
+        "the ordinary executable binds through the modes member"
+    );
+    assert!(
+        member_paths(&dict, "file_modes")
+            .iter()
+            .any(|path| path == "plain/wide.txt"),
+        "the ordinary wide mode file binds through the file modes member"
+    );
+    for member in ["modes", "file_modes"] {
+        for path in member_paths(&dict, member) {
+            assert!(
+                path != "emb" && !path.starts_with("emb/"),
+                "no path of {member} stands under the boundary, {path} stands"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_an_empty_directory_inside_an_embedded_repository_stands_in_no_member() {
+    let (_scratch, main) = make_tree_with_embedded("interior-empty");
+    fs::create_dir_all(main.join("emb").join("hollow")).expect("the empty directory stands");
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    assert!(
+        !embedded_entries(&dict).is_empty(),
+        "the member stands for the repository"
+    );
+    for (member, path) in record_paths_by_member(&dict) {
+        assert!(
+            path != "emb" && !path.starts_with("emb/"),
+            "no path of {member} stands under the boundary, {path} stands"
+        );
+    }
+}
+
+#[test]
+fn test_a_special_file_inside_an_embedded_repository_stands_in_no_member() {
+    let (_scratch, main) = make_tree_with_embedded("interior-special");
+    make_fifo(&main.join("emb"), "pipe");
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    assert!(
+        !embedded_entries(&dict).is_empty(),
+        "the member stands for the repository"
+    );
+    for (member, path) in record_paths_by_member(&dict) {
+        assert!(
+            path != "emb" && !path.starts_with("emb/"),
+            "no path of {member} stands under the boundary, {path} stands"
+        );
+    }
+}
+
+#[test]
+fn test_the_boundary_directory_of_an_embedded_repository_binds_its_mode_in_the_dir_modes_member() {
+    let (_scratch, main) = make_tree_with_embedded("boundary-mode");
+    set_mode(&main.join("emb"), 0o751);
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    assert!(
+        !embedded_entries(&dict).is_empty(),
+        "the member stands for the repository"
+    );
+    let Some(JsonValue::List(dir_modes)) = dict.get("dir_modes") else {
+        panic!("the dir modes member stands");
+    };
+    let standings: Vec<(String, String)> = dir_modes
+        .iter()
+        .map(|item| {
+            let path = item
+                .get("path")
+                .and_then(JsonValue::as_text)
+                .expect("the entry carries its path")
+                .to_string();
+            let mode = item
+                .get("mode")
+                .and_then(JsonValue::as_text)
+                .expect("the entry carries its mode")
+                .to_string();
+            (path, mode)
+        })
+        .collect();
+    assert!(
+        standings.contains(&("emb".to_string(), "751".to_string())),
+        "the boundary mode binds in the dir modes member, {standings:?}"
+    );
+    for (member, path) in record_paths_by_member(&dict) {
+        if member == "dir_modes" && path == "emb" {
+            continue;
+        }
+        assert!(
+            path != "emb" && !path.starts_with("emb/"),
+            "no path of {member} stands under the boundary, {path} stands"
+        );
+    }
+}
+
+#[test]
+fn test_the_embedded_entry_type_stands_named_at_the_library_door() {
+    let (_scratch, main) = make_tree_with_embedded("library-door");
+    let emb = main.join("emb");
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    assert_eq!(record.embedded.len(), 1, "the member carries the one entry");
+    let entry: &finaltree::EmbeddedEntry = &record.embedded[0];
+    assert_eq!(
+        entry.path.as_text(),
+        Some("emb"),
+        "the entry records its path"
+    );
+    assert_eq!(
+        entry.head.as_text(),
+        Some(git_text(&emb, &["rev-parse", "HEAD"]).as_str()),
+        "the entry records the commit the repository stands at"
+    );
+    let own = compute_fingerprint(&emb, &[]).expect("the repository fingerprints");
+    assert_eq!(
+        entry.digest.as_text(),
+        Some(own.digest().as_str()),
+        "the entry records the digest of the repository its own fingerprint"
+    );
+    let rendered = embedded_entries(&record.to_dict());
+    assert_eq!(
+        rendered.len(),
+        1,
+        "the rendered member carries the one entry"
+    );
+    assert_eq!(rendered[0].0, "emb", "the rendered entry records its path");
+    assert_eq!(
+        rendered[0].1, entry.head,
+        "the rendered head stands as the typed head"
+    );
+    assert_eq!(
+        rendered[0].2, entry.digest,
+        "the rendered digest stands as the typed digest"
+    );
+}
