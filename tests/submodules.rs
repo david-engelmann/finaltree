@@ -277,3 +277,143 @@ fn test_a_stamped_log_verifies_against_the_submodule_tree_it_stamped() {
     assert!(result.matched, "the log verifies against its own tree");
     assert!(result.differences.is_empty());
 }
+
+#[test]
+fn test_a_checked_out_submodule_with_an_unborn_head_refuses_the_whole_computation() {
+    let (_scratch, main, _source) = make_submodule_repo("unbornhead");
+    let sub = main.join("sub");
+    git(&sub, &["symbolic-ref", "HEAD", "refs/heads/unborn"]);
+    assert!(
+        compute_fingerprint(&main, &[]).is_err(),
+        "a checked out submodule at an unborn head refuses the whole computation"
+    );
+}
+
+#[test]
+fn test_a_submodule_whose_dot_git_stands_but_reads_nowhere_stands_as_no_checkout() {
+    // The dot git file carrying garbage the git reading refuses,
+    // with the content of the checkout standing inside. The whole
+    // computation refuses at the git status reading it runs over
+    // the tree ahead of the checkout test, so no record stands
+    // produced at this shape at all.
+    {
+        let (_scratch, main, _source) = make_submodule_repo("readsnowhere");
+        let sub = main.join("sub");
+        write_file(&sub, ".git", "garbage in place of a gitfile\n");
+        assert!(
+            compute_fingerprint(&main, &[]).is_err(),
+            "a submodule whose dot git file carries garbage refuses the whole computation"
+        );
+    }
+    // The dot git standing as a dangling symlink, under which the
+    // top level reading returns the enclosing tree.
+    {
+        let (_scratch, main, _source) = make_submodule_repo("danglinglink");
+        let sub = main.join("sub");
+        std::fs::remove_file(sub.join(".git")).expect("the gitfile is removed");
+        std::os::unix::fs::symlink("/nonexistent/finaltree/nowhere", sub.join(".git"))
+            .expect("the dangling symlink stands");
+        let record = fingerprint(&main);
+        assert_eq!(record.submodules.len(), 1, "one submodule stands recorded");
+        assert_eq!(record.submodules[0].head, JsonValue::Null);
+        assert_eq!(record.submodules[0].digest, JsonValue::Null);
+    }
+}
+
+#[test]
+fn test_a_submodule_directory_holding_files_without_a_dot_git_stands_as_no_checkout() {
+    let (_scratch, main, _source) = make_submodule_repo("barefiles");
+    git(&main, &["submodule", "deinit", "-q", "sub"]);
+    let sub = main.join("sub");
+    write_file(&sub, "f.txt", "substance\n");
+    let record = fingerprint(&main);
+    assert_eq!(record.submodules.len(), 1, "one submodule stands recorded");
+    assert_eq!(record.submodules[0].head, JsonValue::Null);
+    assert_eq!(record.submodules[0].digest, JsonValue::Null);
+}
+
+#[test]
+fn test_a_plain_clone_at_a_gitlink_path_stands_checked_out() {
+    let (_scratch, main, source) = make_submodule_repo("plainclone");
+    git(&main, &["submodule", "deinit", "-q", "sub"]);
+    std::fs::remove_dir_all(main.join("sub")).expect("the emptied directory is removed");
+    std::fs::remove_dir_all(main.join(".git").join("modules").join("sub"))
+        .expect("the modules gitdir is removed");
+    // The registration the builder committed in the parent tree
+    // stands removed with the rest, so no registration stands
+    // anywhere in the tree this pin fingerprints.
+    git(&main, &["rm", "-q", ".gitmodules"]);
+    let source_text = source.to_string_lossy().into_owned();
+    git(
+        &main,
+        &[
+            "-c",
+            "protocol.file.allow=always",
+            "clone",
+            "-q",
+            &source_text,
+            "sub",
+        ],
+    );
+    let record = fingerprint(&main);
+    assert_eq!(record.submodules.len(), 1, "one submodule stands recorded");
+    let entry = &record.submodules[0];
+    assert_eq!(entry.head, entry.index_commit, "the clone binds its head");
+    let own = fingerprint(&main.join("sub"));
+    assert_eq!(entry.digest, JsonValue::text(own.digest()));
+}
+
+#[test]
+fn test_a_corrupt_index_inside_a_checked_out_submodule_refuses_the_whole_computation() {
+    let (_scratch, main, _source) = make_submodule_repo("corruptindex");
+    let sub = main.join("sub");
+    let index = main.join(".git").join("modules").join("sub").join("index");
+    std::fs::write(&index, "garbage index standing in place of the real one\n")
+        .expect("the corrupt index stands");
+    // The head reading inside the submodule stands whole while its
+    // stage listing refuses at its header.
+    assert!(common::git_succeeds(&sub, &["rev-parse", "HEAD"]));
+    assert!(
+        compute_fingerprint(&main, &[]).is_err(),
+        "a corrupt index inside a checked out submodule refuses the whole computation"
+    );
+    // The same corrupt index with the submodule standing ignored
+    // in the parent its config, so the git status reading stands
+    // over the fixture and the refusal rises at the interior seat
+    // alone, the own fingerprint call the submodule item carries.
+    {
+        let (_scratch, main, _source) = make_submodule_repo("corruptindexignored");
+        let sub = main.join("sub");
+        git(&main, &["config", "submodule.sub.ignore", "all"]);
+        let index = main.join(".git").join("modules").join("sub").join("index");
+        std::fs::write(&index, "garbage index standing in place of the real one\n")
+            .expect("the corrupt index stands");
+        assert!(common::git_succeeds(&sub, &["rev-parse", "HEAD"]));
+        assert!(
+            compute_fingerprint(&main, &[]).is_err(),
+            "a corrupt index inside a checked out submodule refuses the whole computation"
+        );
+    }
+}
+
+#[test]
+fn test_a_submodule_reached_through_a_symlink_stands_checked_out() {
+    let (_scratch, main, _source) = make_submodule_repo("symlinkpath");
+    std::fs::rename(main.join("sub"), main.join("subcheckout")).expect("the checkout moves aside");
+    std::os::unix::fs::symlink("subcheckout", main.join("sub")).expect("the symlink stands");
+    let sub = main.join("sub");
+    // The top level reading at the path through the symlink stands
+    // whole, the checkout test standing passed at its own seat,
+    // while the whole computation refuses at the git status
+    // reading it runs over the tree, which admits no submodule
+    // path standing as a symbolic link, so no record stands
+    // produced at this shape at all.
+    assert!(common::git_succeeds(
+        &sub,
+        &["rev-parse", "--show-toplevel"]
+    ));
+    assert!(
+        compute_fingerprint(&main, &[]).is_err(),
+        "a submodule reached through a symlink refuses the whole computation"
+    );
+}
