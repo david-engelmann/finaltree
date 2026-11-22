@@ -347,7 +347,7 @@ pub(crate) fn py_set_eq(a: &JsonValue, b: &JsonValue) -> bool {
 /// stops that reading uncaught, and the port refuses it in
 /// the decode family.
 fn refuse_duplicate_raw(
-    path_members: [&[JsonValue]; 10],
+    path_members: [&[JsonValue]; 11],
     dirty: &[JsonValue],
 ) -> Result<(), FinaltreeError> {
     let decode = || FinaltreeError::new("the fingerprint record does not decode");
@@ -696,6 +696,7 @@ fn raw_payload(
     generated: &[JsonValue],
     untracked: &[JsonValue],
     submodules: Option<&[JsonValue]>,
+    embedded: Option<&[JsonValue]>,
     modes: Option<&[JsonValue]>,
     ignored: Option<&[JsonValue]>,
     empty_dirs: Option<&[JsonValue]>,
@@ -724,6 +725,11 @@ fn raw_payload(
         let mut submodules = submodules.to_vec();
         sort_raw(&mut submodules, &["path"])?;
         pairs.push(("submodules", JsonValue::List(submodules)));
+    }
+    if let Some(embedded) = embedded {
+        let mut embedded = embedded.to_vec();
+        sort_raw(&mut embedded, &["path"])?;
+        pairs.push(("embedded", JsonValue::List(embedded)));
     }
     if let Some(modes) = modes {
         let mut modes = modes.to_vec();
@@ -872,6 +878,7 @@ impl Fingerprint {
         let raw_generated = read_raw_members(data, "generated", true, false)?;
         let raw_untracked = read_raw_members(data, "untracked", false, false)?;
         let (raw_submodules, submodules_stand) = read_raw_submodules(data)?;
+        let (raw_embedded, embedded_stand) = read_raw_embedded(data)?;
         let (raw_modes, modes_stand) = read_raw_modes(data)?;
         let (raw_ignored, ignored_stand) = read_raw_ignored(data)?;
         let (raw_empty_dirs, empty_dirs_stand) = read_raw_empty_dirs(data)?;
@@ -890,6 +897,7 @@ impl Fingerprint {
                 &raw_generated,
                 &raw_untracked,
                 &raw_submodules,
+                &raw_embedded,
                 &raw_modes,
                 &raw_ignored,
                 &raw_special,
@@ -922,6 +930,11 @@ impl Fingerprint {
             &raw_untracked,
             if submodules_stand {
                 Some(&raw_submodules)
+            } else {
+                None
+            },
+            if embedded_stand {
+                Some(&raw_embedded)
             } else {
                 None
             },
@@ -969,6 +982,7 @@ impl Fingerprint {
                 &raw_generated,
                 &raw_untracked,
                 &raw_submodules,
+                &raw_embedded,
                 &raw_modes,
                 &raw_ignored,
                 &raw_empty_dirs,
@@ -1015,7 +1029,7 @@ impl Fingerprint {
             untracked: raw_untracked.iter().map(member_untracked).collect(),
             generated_patterns: patterns_raw,
             submodules: raw_submodules.iter().map(member_submodule).collect(),
-            embedded: Vec::new(),
+            embedded: raw_embedded.iter().map(member_embedded).collect(),
             modes: raw_modes.iter().map(member_mode).collect(),
             ignored: raw_ignored.iter().map(member_ignored).collect(),
             empty_dirs: raw_empty_dirs,
@@ -1042,6 +1056,7 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "generated_patterns",
         "digest",
         "submodules",
+        "embedded",
         "modes",
         "ignored",
         "empty_dirs",
@@ -1050,12 +1065,13 @@ fn uncovered_surrogate_stands(data: &JsonValue) -> bool {
         "file_modes",
         "dot_git",
     ];
-    let fields: [(&str, &[&str]); 11] = [
+    let fields: [(&str, &[&str]); 12] = [
         ("tracked", &["path", "blob", "index_blobs"]),
         ("dirty", &["path", "kind"]),
         ("generated", &["path", "blob"]),
         ("untracked", &["path", "blob"]),
         ("submodules", &["path", "index_commit", "head", "digest"]),
+        ("embedded", &["path", "head", "digest"]),
         ("modes", &["path", "mode"]),
         ("ignored", &["path", "blob"]),
         ("special", &["path", "kind"]),
@@ -1129,6 +1145,15 @@ fn member_submodule(entry: &JsonValue) -> SubmoduleEntry {
     }
 }
 
+/// Take an embedded member out of its payload entry shape.
+fn member_embedded(entry: &JsonValue) -> EmbeddedEntry {
+    EmbeddedEntry {
+        path: entry.get("path").expect("a payload entry stands").clone(),
+        head: entry.get("head").expect("a payload entry stands").clone(),
+        digest: entry.get("digest").expect("a payload entry stands").clone(),
+    }
+}
+
 /// Read the submodules member of a record into payload entry
 /// shape, with values as written, and whether the member
 /// stands in the record at all. The member stands absent as
@@ -1154,6 +1179,36 @@ fn read_raw_submodules(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), Final
         out.push(JsonValue::object(vec![
             ("path", path),
             ("index_commit", index_commit),
+            ("head", head),
+            ("digest", digest),
+        ]));
+    }
+    Ok((out, true))
+}
+
+/// Read the embedded member of a record into payload entry
+/// shape, with values as written, and whether the member
+/// stands in the record at all. The member stands absent as
+/// the empty list, and a record carrying it computes its
+/// digest over it exactly as written.
+fn read_raw_embedded(data: &JsonValue) -> Result<(Vec<JsonValue>, bool), FinaltreeError> {
+    let decode = || FinaltreeError::new("the fingerprint record does not decode");
+    let items = match data.get("embedded") {
+        None => return Ok((Vec::new(), false)),
+        Some(JsonValue::List(items)) if items.is_empty() => return Err(decode()),
+        Some(JsonValue::List(items)) => items,
+        Some(_) => return Err(decode()),
+    };
+    let mut out = Vec::new();
+    for entry in items {
+        if !entry.is_object() {
+            return Err(decode());
+        }
+        let path = entry.get("path").cloned().ok_or_else(decode)?;
+        let head = entry.get("head").cloned().ok_or_else(decode)?;
+        let digest = entry.get("digest").cloned().ok_or_else(decode)?;
+        out.push(JsonValue::object(vec![
+            ("path", path),
             ("head", head),
             ("digest", digest),
         ]));
