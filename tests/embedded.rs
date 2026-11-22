@@ -19,6 +19,9 @@ use std::process::Command;
 
 use finaltree::fingerprint::{compute_fingerprint, Fingerprint};
 use finaltree::jsonvalue::JsonValue;
+use finaltree::render::render_compact;
+use finaltree::sha256::sha256_hex;
+use finaltree::stamping::{compare_fingerprints, run_and_stamp, verify_stamped_log};
 
 use common::{git, make_factory_repo, pinned, write_file, Scratch};
 
@@ -393,4 +396,190 @@ fn test_an_embedded_repository_holding_no_commit_records_its_head_as_null() {
         matches!(digest, JsonValue::Null),
         "the digest stands null beside the head"
     );
+}
+
+/// Doctor a genuine record by standing the embedded
+/// member present with an empty list, the digest
+/// recomputed over the payload as written, in the
+/// fixture discipline EM-6 states. The payload the
+/// digest stands over is the record with its digest
+/// and its generated patterns set aside and the member
+/// standing where the record carries it.
+fn record_with_empty_embedded(record: &JsonValue) -> JsonValue {
+    let JsonValue::Object(pairs) = record else {
+        panic!("the record is an object");
+    };
+    let mut payload: Vec<(String, JsonValue)> = Vec::new();
+    let mut patterns = JsonValue::List(Vec::new());
+    for (key, value) in pairs {
+        match key.as_str() {
+            "digest" => {}
+            "generated_patterns" => patterns = value.clone(),
+            "embedded" => payload.push((key.clone(), JsonValue::List(Vec::new()))),
+            _ => payload.push((key.clone(), value.clone())),
+        }
+    }
+    let digest = sha256_hex(render_compact(&JsonValue::Object(payload.clone())).as_bytes());
+    let mut doctored = payload;
+    doctored.push(("digest".to_string(), JsonValue::text(digest)));
+    doctored.push(("generated_patterns".to_string(), patterns));
+    JsonValue::Object(doctored)
+}
+
+#[test]
+fn test_a_record_carrying_an_embedded_member_reads_back_whole() {
+    let (_scratch, main) = make_tree_with_embedded("reads-back");
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    let entries = embedded_entries(&dict);
+    assert_eq!(entries.len(), 1, "the member carries the one entry");
+    let restored = Fingerprint::from_dict(&dict).expect("the record reads back");
+    assert_eq!(
+        restored.embedded.len(),
+        1,
+        "the read record carries the member"
+    );
+    assert_eq!(
+        embedded_entries(&restored.to_dict()),
+        entries,
+        "the member reads back as written"
+    );
+    assert_eq!(
+        restored.to_dict(),
+        dict,
+        "the read record re-emits the record whole"
+    );
+}
+
+#[test]
+fn test_a_record_carrying_the_same_embedded_repository_twice_is_refused() {
+    let (_scratch, main) = make_tree_with_embedded("duplicate");
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    let JsonValue::Object(mut pairs) = dict else {
+        panic!("the record is an object");
+    };
+    for (key, value) in pairs.iter_mut() {
+        if key == "embedded" {
+            let JsonValue::List(items) = value else {
+                panic!("the member is a list");
+            };
+            let first = items[0].clone();
+            items.push(first);
+        }
+    }
+    let doubled = JsonValue::Object(pairs);
+    let error = Fingerprint::from_dict(&doubled).expect_err("the doubled member refuses");
+    assert_eq!(
+        error.to_string(),
+        "the fingerprint record carries the same member twice"
+    );
+}
+
+#[test]
+fn test_a_record_carrying_an_embedded_entry_that_does_not_decode_is_refused() {
+    let (_scratch, main) = make_tree_with_embedded("undecodable-entry");
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    let JsonValue::Object(mut pairs) = dict else {
+        panic!("the record is an object");
+    };
+    for (key, value) in pairs.iter_mut() {
+        if key == "embedded" {
+            let JsonValue::List(items) = value else {
+                panic!("the member is a list");
+            };
+            let JsonValue::Object(entry) = &mut items[0] else {
+                panic!("the entry is an object");
+            };
+            entry.retain(|(field, _)| field.as_str() != "digest");
+        }
+    }
+    let dict = JsonValue::Object(pairs);
+    let error = Fingerprint::from_dict(&dict).expect_err("the entry refuses");
+    assert_eq!(error.to_string(), "the fingerprint record does not decode");
+}
+
+#[test]
+fn test_a_record_carrying_an_empty_embedded_member_is_refused() {
+    let (_scratch, main) = make_tree_with_embedded("empty-member");
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record_with_empty_embedded(&record.to_dict());
+    let error = Fingerprint::from_dict(&dict).expect_err("the empty member refuses");
+    assert_eq!(error.to_string(), "the fingerprint record does not decode");
+}
+
+#[test]
+fn test_a_removed_embedded_repository_names_an_embedded_difference() {
+    let (_scratch, main) = make_tree_with_embedded("removed");
+    let before = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    fs::remove_dir_all(main.join("emb")).expect("the repository is removed");
+    let after = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let differences = compare_fingerprints(&before, &after).expect("the comparison stands");
+    assert!(
+        differences
+            .iter()
+            .any(|line| line == "embedded removed emb"),
+        "the removal is named, {differences:?}"
+    );
+}
+
+#[test]
+fn test_a_added_embedded_repository_names_an_embedded_difference() {
+    let scratch = Scratch::new("embedded", "added");
+    let main = scratch.0.join("main");
+    make_factory_repo(&main);
+    let before = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    make_embedded_repo(&main.join("emb"));
+    let after = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let differences = compare_fingerprints(&before, &after).expect("the comparison stands");
+    assert!(
+        differences.iter().any(|line| line == "embedded added emb"),
+        "the addition is named, {differences:?}"
+    );
+}
+
+#[test]
+fn test_a_moved_embedded_head_names_an_embedded_difference() {
+    let (_scratch, main) = make_tree_with_embedded("head-moved");
+    let emb = main.join("emb");
+    let before = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    write_file(&emb, "g.txt", "second\n");
+    git(&emb, &["add", "."]);
+    git(&emb, &["commit", "-q", "-m", "second"]);
+    let after = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let differences = compare_fingerprints(&before, &after).expect("the comparison stands");
+    assert!(
+        differences
+            .iter()
+            .any(|line| line == "embedded head moved emb"),
+        "the head move is named, {differences:?}"
+    );
+}
+
+#[test]
+fn test_a_dirty_embedded_repository_names_an_embedded_content_difference() {
+    let (_scratch, main) = make_tree_with_embedded("content-changed");
+    let emb = main.join("emb");
+    let before = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    write_file(&emb, "f.txt", "embedded beta\n");
+    let after = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let differences = compare_fingerprints(&before, &after).expect("the comparison stands");
+    assert!(
+        differences
+            .iter()
+            .any(|line| line == "embedded content changed emb"),
+        "the content change is named, {differences:?}"
+    );
+}
+
+#[test]
+fn test_a_stamped_log_verifies_against_the_embedded_tree_it_stamped() {
+    let (scratch, main) = make_tree_with_embedded("stamped-log");
+    let log = scratch.0.join("stamped.log");
+    let code = run_and_stamp(&main, &["true".to_string()], &log, &[]).expect("the stamp runs");
+    assert_eq!(code, 0);
+    let result = verify_stamped_log(&log, &main, None).expect("the verify runs");
+    assert!(result.matched, "the log verifies against its own tree");
+    assert!(result.differences.is_empty());
 }
