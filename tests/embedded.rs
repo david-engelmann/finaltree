@@ -583,3 +583,148 @@ fn test_a_stamped_log_verifies_against_the_embedded_tree_it_stamped() {
     assert!(result.matched, "the log verifies against its own tree");
     assert!(result.differences.is_empty());
 }
+
+#[test]
+fn test_an_embedded_repository_with_an_unborn_head_records_its_head_as_null() {
+    let (_scratch, main) = make_tree_with_embedded("unborn-head");
+    let emb = main.join("emb");
+    git(&emb, &["symbolic-ref", "HEAD", "refs/heads/unborn"]);
+    assert!(
+        !git_text(&emb, &["rev-parse", "main"]).is_empty(),
+        "the repository holds its commit on the held branch"
+    );
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let entries = embedded_entries(&record.to_dict());
+    assert_eq!(entries.len(), 1, "the member carries the one entry");
+    let (path, head, digest) = &entries[0];
+    assert_eq!(path, "emb", "the entry records its path");
+    assert!(
+        matches!(head, JsonValue::Null),
+        "the head stands null where the head reading fails"
+    );
+    assert!(
+        matches!(digest, JsonValue::Null),
+        "the digest stands null beside the head"
+    );
+}
+
+#[test]
+fn test_a_commit_landing_on_the_held_branch_of_an_unborn_head_repository_moves_nothing() {
+    let (_scratch, main) = make_tree_with_embedded("unborn-held-commit");
+    let emb = main.join("emb");
+    git(&emb, &["symbolic-ref", "HEAD", "refs/heads/unborn"]);
+    let before = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let held_before = git_text(&emb, &["rev-parse", "main"]);
+    write_file(&emb, "held.txt", "held two\n");
+    git(&emb, &["add", "."]);
+    let tree = git_text(&emb, &["write-tree"]);
+    let commit = git_text(
+        &emb,
+        &["commit-tree", tree.as_str(), "-p", "main", "-m", "held two"],
+    );
+    git(&emb, &["update-ref", "refs/heads/main", commit.as_str()]);
+    assert_ne!(
+        git_text(&emb, &["rev-parse", "main"]),
+        held_before,
+        "the held branch moves with the landed commit"
+    );
+    let after = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    assert_eq!(
+        before.to_dict(),
+        after.to_dict(),
+        "the record stands identical across the held branch commit"
+    );
+    assert_eq!(
+        before.digest(),
+        after.digest(),
+        "the record digest stands across the held branch commit"
+    );
+}
+
+#[test]
+fn test_a_change_inside_a_commitless_embedded_repository_moves_nothing() {
+    let scratch = Scratch::new("embedded", "commitless-change");
+    let main = scratch.0.join("main");
+    make_factory_repo(&main);
+    let emb = main.join("emb");
+    fs::create_dir_all(&emb).expect("the embedded root stands");
+    git(&emb, &["init", "-q", "-b", "main", "."]);
+    write_file(&emb, "f.txt", "uncommitted\n");
+    let before = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    write_file(&emb, "added.txt", "added\n");
+    write_file(&emb, "f.txt", "changed\n");
+    let after = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    assert_eq!(
+        before.to_dict(),
+        after.to_dict(),
+        "the record stands identical across the interior change"
+    );
+    assert_eq!(
+        before.digest(),
+        after.digest(),
+        "the record digest stands across the interior change"
+    );
+}
+
+#[test]
+fn test_a_corrupt_embedded_index_refuses_the_whole_computation() {
+    let (_scratch, main) = make_tree_with_embedded("corrupt-index");
+    let emb = main.join("emb");
+    let before = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    assert_eq!(
+        embedded_entries(&before.to_dict()).len(),
+        1,
+        "the member stands before the corruption"
+    );
+    let index = emb.join(".git").join("index");
+    let data = fs::read(&index).expect("the index stands");
+    let mut corrupted = b"XXXX".to_vec();
+    corrupted.resize(data.len(), 0);
+    fs::write(&index, corrupted).expect("the index is overwritten");
+    let error = compute_fingerprint(&main, &[]).expect_err("the computation refuses");
+    assert!(
+        error
+            .to_string()
+            .starts_with("git ls-files --stage -z failed."),
+        "the refusal speaks the git reading its sentence, {error}"
+    );
+}
+
+#[test]
+fn test_a_corrupt_embedded_head_stands_as_no_repository() {
+    let (_scratch, main) = make_tree_with_embedded("corrupt-head");
+    let emb = main.join("emb");
+    write_file(&emb, ".git/HEAD", "garbage-not-a-ref\n");
+    let record = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let dict = record.to_dict();
+    assert!(
+        dict.get("embedded").is_none(),
+        "the record carries no embedded member"
+    );
+    assert!(
+        member_paths(&dict, "untracked")
+            .iter()
+            .any(|path| path == "emb/f.txt"),
+        "the working file binds as an ordinary untracked file"
+    );
+}
+
+#[test]
+fn test_an_interior_change_in_a_null_form_repository_names_no_embedded_difference() {
+    let scratch = Scratch::new("embedded", "null-form-verify");
+    let main = scratch.0.join("main");
+    make_factory_repo(&main);
+    let emb = main.join("emb");
+    fs::create_dir_all(&emb).expect("the embedded root stands");
+    git(&emb, &["init", "-q", "-b", "main", "."]);
+    write_file(&emb, "f.txt", "uncommitted\n");
+    let before = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    write_file(&emb, "f.txt", "changed\n");
+    write_file(&emb, "added.txt", "added\n");
+    let after = compute_fingerprint(&main, &[]).expect("the tree fingerprints");
+    let differences = compare_fingerprints(&before, &after).expect("the comparison stands");
+    assert!(
+        differences.is_empty(),
+        "no difference stands named, {differences:?}"
+    );
+}
