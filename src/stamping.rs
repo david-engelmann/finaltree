@@ -1020,6 +1020,44 @@ pub fn compare_fingerprints(
             (None, None) => unreachable!(),
         }
     }
+    let mut embedded_paths: Vec<&JsonValue> = Vec::new();
+    for entry in expected.embedded.iter().chain(actual.embedded.iter()) {
+        if !embedded_paths
+            .iter()
+            .any(|standing| py_set_eq(standing, &entry.path))
+        {
+            embedded_paths.push(&entry.path);
+        }
+    }
+    let mut embedded_sorted: Vec<JsonValue> =
+        embedded_paths.iter().map(|path| (*path).clone()).collect();
+    sort_values(&mut embedded_sorted).ok_or_else(decode)?;
+    for path in &embedded_sorted {
+        let expected_entry = expected
+            .embedded
+            .iter()
+            .find(|entry| py_set_eq(&entry.path, path));
+        let actual_entry = actual
+            .embedded
+            .iter()
+            .find(|entry| py_set_eq(&entry.path, path));
+        match (expected_entry, actual_entry) {
+            (Some(_), None) => {
+                differences.push(format!("embedded removed {}", py_str(path)));
+            }
+            (None, Some(_)) => {
+                differences.push(format!("embedded added {}", py_str(path)));
+            }
+            (Some(expected_entry), Some(actual_entry)) => {
+                if !py_set_eq(&expected_entry.head, &actual_entry.head) {
+                    differences.push(format!("embedded head moved {}", py_str(path)));
+                } else if !py_set_eq(&expected_entry.digest, &actual_entry.digest) {
+                    differences.push(format!("embedded content changed {}", py_str(path)));
+                }
+            }
+            (None, None) => unreachable!(),
+        }
+    }
     Ok(differences)
 }
 
