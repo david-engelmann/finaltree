@@ -174,11 +174,16 @@ fn test_a_file_replaced_at_a_new_inode_moves_nothing() {
 #[test]
 fn test_a_recreated_tree_fingerprints_as_the_tree_it_copies() {
     let (scratch, root) = make_repo("recreated");
-    let before = fingerprint(&root);
     let copy_root = scratch.0.join("copy");
     make_factory_repo(&copy_root);
     write_file(&copy_root, "u.txt", "gamma\n");
     write_file(&copy_root, "d/f.txt", "delta\n");
+    let original_time = fixed_time(981_173_106);
+    let copy_time = fixed_time(1_015_218_367);
+    set_modified_time(&root.join("u.txt"), original_time);
+    set_modified_time(&copy_root.join("u.txt"), copy_time);
+    assert_eq!(modified_time(&root.join("u.txt")), original_time);
+    assert_eq!(modified_time(&copy_root.join("u.txt")), copy_time);
     assert_ne!(
         inode_of(&copy_root.join("u.txt")),
         inode_of(&root.join("u.txt")),
@@ -189,6 +194,7 @@ fn test_a_recreated_tree_fingerprints_as_the_tree_it_copies() {
         modified_time(&root.join("u.txt")),
         "the copy stands at its own times"
     );
+    let before = fingerprint(&root);
     let after = fingerprint(&copy_root);
     assert_eq!(
         after.digest(),
