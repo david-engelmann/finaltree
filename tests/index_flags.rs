@@ -283,3 +283,77 @@ fn test_an_intent_to_add_file_binds_at_its_empty_index_blob() {
     );
     assert_ne!(record, staged, "the standings part at both seats");
 }
+
+#[test]
+fn test_a_staged_then_flagged_file_binds_at_its_staged_kind() {
+    for (area, flag, letter) in [
+        ("stagedsw", "--skip-worktree", 'S'),
+        ("stagedau", "--assume-unchanged", 'h'),
+    ] {
+        let (_held, root) = make_repo(area);
+        write_file(&root, "a.txt", "alpha changed\n");
+        git(&root, &["add", "a.txt"]);
+        let staged = read_record(&root);
+        assert_eq!(
+            dirty_pairs(&staged),
+            vec![("a.txt".to_string(), "staged".to_string())],
+            "the staged standing binds at the staged kind"
+        );
+        set_flag(&root, flag, "a.txt", letter);
+        let flagged = read_record(&root);
+        assert_eq!(
+            dirty_pairs(&flagged),
+            vec![("a.txt".to_string(), "staged".to_string())],
+            "the staged line still prints and still binds under the flag"
+        );
+        assert_eq!(
+            flagged, staged,
+            "the staged record stands identical whole under the flag"
+        );
+        assert_eq!(flagged.digest(), staged.digest());
+        drop(_held);
+    }
+}
+
+#[test]
+fn test_an_intent_to_add_file_under_a_flag_names_no_dirty_entry() {
+    let (_scratch, root) = make_repo("itaflag");
+    write_file(&root, "c.txt", "gamma\n");
+    git(&root, &["add", "-N", "c.txt"]);
+    let unflagged = read_record(&root);
+    assert_eq!(
+        dirty_pairs(&unflagged),
+        vec![("c.txt".to_string(), "modified".to_string())],
+        "the unflagged intent to add standing binds visibly"
+    );
+    set_flag(&root, "--skip-worktree", "c.txt", 'S');
+    let flagged = read_record(&root);
+    assert!(
+        flagged.dirty.is_empty(),
+        "no dirty entry stands, {:?}",
+        flagged.dirty
+    );
+    let entry = tracked_entry(&flagged, "c.txt");
+    assert_eq!(
+        entry.index_blobs,
+        vec![JsonValue::Text(
+            "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391".to_string()
+        )],
+        "the index blob stands as the empty blob"
+    );
+    assert_ne!(
+        entry.blob, entry.index_blobs[0],
+        "the working blob carries the content"
+    );
+    assert_eq!(
+        entry,
+        tracked_entry(&unflagged, "c.txt"),
+        "the tracked entry stands as the unflagged standing carries it"
+    );
+    let differences = compare_fingerprints(&unflagged, &flagged).expect("the comparison runs");
+    assert_eq!(
+        differences,
+        vec!["dirty file cleaned c.txt (modified)".to_string()],
+        "the records part in the dirty member alone"
+    );
+}
