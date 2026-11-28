@@ -4,6 +4,7 @@
 - [Operator Guide](GUIDE.md)
 - [Architecture](ARCHITECTURE.md)
 - [Wire Formats](FORMATS.md)
+- [Performance](PERFORMANCE.md)
 - [Comparison](COMPARISON.md)
 - [FAQ](FAQ.md)
 - [Changelog](CHANGELOG.md)

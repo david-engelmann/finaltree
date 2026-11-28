@@ -23,6 +23,11 @@ exclude = [
     ".github/**",
     "deny.toml",
     "install.sh",
+    "Dockerfile",
+    ".dockerignore",
+    "man/**",
+    "completions/**",
+    "scripts/**",
 ]
 
 [lib]

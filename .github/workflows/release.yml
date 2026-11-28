@@ -202,6 +202,10 @@ jobs:
               tf.add(bin_path, arcname=exe, filter=clean_tarinfo)
               tf.add("LICENSE", arcname="LICENSE", filter=clean_tarinfo)
               tf.add("README.md", arcname="README.md", filter=clean_tarinfo)
+              if pathlib.Path("man/finaltree.1").is_file():
+                  tf.add("man/finaltree.1", arcname="man/finaltree.1", filter=clean_tarinfo)
+              for comp in sorted(pathlib.Path("completions").glob("*")):
+                  tf.add(comp, arcname=f"completions/{comp.name}", filter=clean_tarinfo)
           digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
           (out_dir / f"{archive_path.name}.sha256").write_text(f"{digest}  {archive_path.name}\n", encoding="utf-8")
           PY

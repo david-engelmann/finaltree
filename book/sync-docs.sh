@@ -34,7 +34,7 @@ for rdoc in ("SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md"):
 intro = intro.replace("(docs/", "(")
 (book_src / "introduction.md").write_text(intro, encoding="utf-8")
 
-for doc_name in ("GUIDE.md", "ARCHITECTURE.md", "FORMATS.md", "COMPARISON.md", "FAQ.md"):
+for doc_name in ("GUIDE.md", "ARCHITECTURE.md", "FORMATS.md", "PERFORMANCE.md", "COMPARISON.md", "FAQ.md"):
     txt = (root / "docs" / doc_name).read_text(encoding="utf-8")
     txt = rewrite_media(txt)
     txt = txt.replace(blob_docs_prefix, "")

@@ -1,0 +1,92 @@
+.TH FINALTREE 1 "2026-11-28" "finaltree 0.21.0" "User Commands"
+.SH NAME
+finaltree \- working-tree provenance fingerprinter and gate-log stamper
+.SH SYNOPSIS
+.B finaltree fingerprint
+.RB [ \-\-generated
+.I PATTERN
+.RI ... ]
+.I ROOT
+.br
+.B finaltree stamp
+.I ROOT
+.B \-\-log
+.I PATH
+.RB [ \-\-generated
+.I PATTERN
+.RI ... ]
+.B \-\-
+.I COMMAND
+.RI [ ARG ... ]
+.br
+.B finaltree verify
+.I LOG ROOT
+.RB [ \-\-generated
+.I PATTERN
+.RI ... ]
+.SH DESCRIPTION
+.B finaltree
+computes a canonical SHA-256 fingerprint of a local Git working tree
+.RB ( HEAD ,
+tracked working-tree and index blobs, untracked files, declared
+.B \-\-generated
+artifacts, ignored files, modes, and recursive submodules), prefixes every
+line of gate output with that digest in
+.BR finaltree\-stamped\-log/1 ,
+records an unkeyed SHA-256
+.B evidence\-digest
+over the command, exit code, and output lines, and verifies merge-candidate
+provenance.
+.SH COMMANDS
+.TP
+.B fingerprint
+Print canonical
+.B finaltree\-fingerprint/1
+JSON for
+.I ROOT
+to standard output.
+.TP
+.B stamp
+Fingerprint
+.IR ROOT ,
+execute
+.I COMMAND
+inside
+.IR ROOT ,
+write the stamped log to
+.BR \-\-log ,
+and exit with the gate command's exit status. Keep
+.B \-\-log
+and compiler scratch directories outside
+.IR ROOT .
+.TP
+.B verify
+Validate log formatting and
+.BR evidence\-digest ,
+recompute the fingerprint of
+.IR ROOT ,
+and print
+.B match
+(exit 0) or
+.B mismatch
+with member-level differences (exit 1).
+.SH EXIT STATUS
+.TP
+.B 0
+Fingerprint succeeded, stamped gate exited 0, or verify matched.
+.TP
+.B 1
+Verify detected working-tree differences (or stamped gate exited 1).
+.TP
+.B 2
+Usage error, malformed or truncated log, or unreadable/unborn repository
+refusal.
+.SH EXAMPLES
+.nf
+CARGO_TARGET_DIR=/tmp/gate-target finaltree stamp . --log /tmp/gate.stamped.log -- cargo test --locked
+finaltree verify /tmp/gate.stamped.log . && grep -qx 'exit-code 0' /tmp/gate.stamped.log
+.fi
+.SH SEE ALSO
+https://david-engelmann.github.io/finaltree/
+.SH AUTHORS
+David Engelmann

@@ -1,0 +1,21 @@
+#compdef finaltree
+
+_finaltree() {
+    local -a subcommands
+    subcommands=(
+        'fingerprint:print canonical working-tree fingerprint JSON'
+        'stamp:fingerprint tree, run command, and write stamped log'
+        'verify:verify stamped log against candidate tree'
+    )
+    if (( CURRENT == 2 )); then
+        _describe -t subcommands 'finaltree subcommand' subcommands
+        return 0
+    fi
+    _arguments -s \
+        '*--generated=[glob pattern for generated artifacts]:pattern:' \
+        '--log=[stamped log output path]:file:_files' \
+        '(-h --help)'{-h,--help}'[print usage]' \
+        '*:file:_files'
+}
+
+_finaltree "$@"

@@ -14,6 +14,8 @@ Finaltree asks what exact tree a gate ran on by fingerprinting `HEAD`, working-t
 - [Operator Guide](GUIDE.md) Step-by-step installation, all three CLI doors, `--` command separation, external log and build-directory placement, Git hook environment hygiene, and CI workflows.
 - [Architecture](ARCHITECTURE.md) Working-tree and submodule scanning, token-based glob matching, tamper-evident log sealing, and Gate Truth suite boundaries.
 - [Wire Formats](FORMATS.md) Deterministic JSON and line-stamped schemas across `finaltree-fingerprint/1`, `finaltree-stamped-log/1`, and `verify` diff lines.
+- [Performance](PERFORMANCE.md) Measured synthetic throughput, latency charts, and reproducible `scripts/bench.py` harness.
+- [Rust API Reference](https://david-engelmann.github.io/finaltree/api/finaltree/index.html) Generated crate documentation for library callers.
 - [Comparison](COMPARISON.md) Technical comparison against `git rev-parse HEAD`, `git status`, CI cache keys, and sibling Gate Truth tools.
 - [FAQ](FAQ.md) Direct answers to common `--log` placement, `exit-code` checking, ignored build output, and Git hook questions.
 - [Changelog](../CHANGELOG.md) Release milestone summaries.

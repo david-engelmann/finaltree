@@ -25,6 +25,20 @@ export PATH="$HOME/.local/bin:$PATH"
 cargo binstall --git https://github.com/david-engelmann/finaltree finaltree
 ```
 
+### Shell Completions, Manpage, and Container
+
+Install shell completions and the Unix manual page from a checkout, or run the reproducible non-root container image on Linux, macOS, or Windows (WSL2 and Docker Desktop).
+
+```sh
+# Shell completions (bash, zsh, fish) and Unix manpage
+source completions/finaltree.bash
+man ./man/finaltree.1
+
+# Reproducible non-root container (includes git for working-tree fingerprinting)
+docker build -t finaltree .
+docker run --rm -v "$PWD:/work:ro" finaltree --help
+```
+
 ## All Three CLI Doors
 
 ```text
