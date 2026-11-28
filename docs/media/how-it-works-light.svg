@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 270" width="960" height="270" role="img" aria-label="How finaltree binds working-tree provenance to gate logs">
+  <title>How finaltree fingerprints every working-tree surface and verifies stamped gate logs</title>
+  <rect width="960" height="270" rx="18" fill="#faf9f6" stroke="#d6d3cd" stroke-width="1.5"/>
+  <text x="26" y="36" fill="#b45309" font-family="'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" letter-spacing="1.1">FINALTREE PIPELINE  /  CRYPTOGRAPHIC GATE LOG PROVENANCE</text>
+  <text x="26" y="62" fill="#1c1917" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="750">Fingerprint the exact tree under test, bind every output line, and convict stale or altered logs</text>
+
+  <rect x="24" y="84" width="212" height="162" rx="12" fill="#ffffff" stroke="#d6d3cd" stroke-width="1.3"/>
+  <text x="38" y="108" fill="#b45309" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace" font-size="11" font-weight="700">1. TREE SCAN</text>
+  <text x="38" y="132" fill="#1c1917" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="700">Beyond HEAD commit</text>
+  <text x="38" y="154" fill="#57534e" font-family="system-ui, -apple-system, sans-serif" font-size="12">
+    <tspan x="38" dy="0">Captures HEAD, working</tspan>
+    <tspan x="38" dy="17">and staged index blobs,</tspan>
+    <tspan x="38" dy="17">untracked files, modes,</tspan>
+    <tspan x="38" dy="17">and nested submodules</tspan>
+  </text>
+
+  <rect x="257" y="84" width="212" height="162" rx="12" fill="#ffffff" stroke="#d6d3cd" stroke-width="1.3"/>
+  <text x="271" y="108" fill="#b45309" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace" font-size="11" font-weight="700">2. SHA-256 DIGEST</text>
+  <text x="271" y="132" fill="#1c1917" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="700">finaltree-fingerprint/1</text>
+  <text x="271" y="154" fill="#57534e" font-family="system-ui, -apple-system, sans-serif" font-size="12">
+    <tspan x="271" dy="0">Separates --generated</tspan>
+    <tspan x="271" dy="17">artifact globs from</tspan>
+    <tspan x="271" dy="17">dirty edits under one</tspan>
+    <tspan x="271" dy="17">canonical SHA-256 hash</tspan>
+  </text>
+
+  <rect x="490" y="84" width="212" height="162" rx="12" fill="#fffbeb" stroke="#d97706" stroke-width="1.8"/>
+  <text x="504" y="108" fill="#b45309" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace" font-size="11" font-weight="700">3. STAMPED RUN</text>
+  <text x="504" y="132" fill="#1c1917" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="700">finaltree-stamped-log/1</text>
+  <text x="504" y="154" fill="#44403c" font-family="system-ui, -apple-system, sans-serif" font-size="12">
+    <tspan x="504" dy="0">Prefixes every gate line</tspan>
+    <tspan x="504" dy="17">with the tree digest and</tspan>
+    <tspan x="504" dy="17">seals argv, exit code,</tspan>
+    <tspan x="504" dy="17">and output in a digest</tspan>
+  </text>
+
+  <rect x="723" y="84" width="213" height="162" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="737" y="108" fill="#15803d" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace" font-size="11" font-weight="700">4. MERGE VERIFY</text>
+  <text x="737" y="132" fill="#1c1917" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="700">Match or named diff</text>
+  <text x="737" y="154" fill="#44403c" font-family="system-ui, -apple-system, sans-serif" font-size="12">
+    <tspan x="737" dy="0">Recomputes candidate</tspan>
+    <tspan x="737" dy="17">tree and names every</tspan>
+    <tspan x="737" dy="17">content, index, mode,</tspan>
+    <tspan x="737" dy="17">generated, or submod diff</tspan>
+  </text>
+</svg>

@@ -1,9 +1,29 @@
 [package]
 name = "finaltree"
-version = "0.1.0"
+version = "0.21.0"
 edition = "2021"
+rust-version = "1.80"
 description = "Provenance for gate results, fingerprinting the exact tree under test"
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/david-engelmann/finaltree"
+homepage = "https://david-engelmann.github.io/finaltree/"
+documentation = "https://david-engelmann.github.io/finaltree/"
+keywords = ["git", "ci", "provenance", "fingerprint", "verification"]
+categories = ["command-line-utilities", "development-tools"]
+exclude = [
+    "tests/**",
+    "book/**",
+    "docs/media/**",
+    "CONTRACT.md",
+    "AGENTS.md",
+    "CITATION.cff",
+    ".editorconfig",
+    ".gitattributes",
+    ".github/**",
+    "deny.toml",
+    "install.sh",
+]
 
 [lib]
 name = "finaltree"
@@ -12,3 +32,8 @@ path = "src/lib.rs"
 [[bin]]
 name = "finaltree"
 path = "src/main.rs"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-v{ version }-{ target }.{ archive-format }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" width="920" height="420" role="img" aria-label="finaltree terminal run over synthetic examples">
+  <title>finaltree terminal showcase stamping a gate log and catching post-gate edits</title>
+  <rect width="920" height="420" rx="16" fill="#141413" stroke="#33312d" stroke-width="1.5"/>
+  <rect width="920" height="38" rx="16" fill="#1f1e1b"/>
+  <rect y="22" width="920" height="16" fill="#1f1e1b"/>
+  <circle cx="22" cy="19" r="6" fill="#ef4444"/>
+  <circle cx="42" cy="19" r="6" fill="#f59e0b"/>
+  <circle cx="62" cy="19" r="6" fill="#22c55e"/>
+  <text x="460" y="23" text-anchor="middle" fill="#a8a29e" font-family="'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace" font-size="12" font-weight="600">finaltree stamp tree --log stamped.log -- sh gate.sh &amp;&amp; finaltree verify stamped.log tree</text>
+
+  <g font-family="'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace" font-size="12.5">
+    <text x="24" y="66" fill="#f59e0b">$</text>
+    <text x="40" y="66" fill="#f5f2eb">finaltree stamp tree --log stamped.log -- sh gate.sh &amp;&amp; cat stamped.log</text>
+
+    <text x="24" y="94" fill="#fbbf24" font-weight="700">finaltree-stamped-log/1</text>
+    <text x="24" y="114" fill="#d6d3d1">fingerprint ea30bdcfcff91b034c09dde045eed59ea966b810900a27e3a3f2f359494dafb8</text>
+    <text x="24" y="134" fill="#d6d3d1">command-json ["sh", "gate.sh"]</text>
+    <text x="24" y="154" fill="#86efac">exit-code 0</text>
+    <text x="24" y="174" fill="#d6d3d1">evidence-digest 82e0becf6b7142cb55cfe420bdaf03602d29b7e08617ad189525248464c30910</text>
+    <text x="24" y="194" fill="#93c5fd">begin-output</text>
+    <text x="24" y="214" fill="#e7e5e4">ea30bdcfcff91b034c09dde045eed59ea966b810900a27e3a3f2f359494dafb8 | 12 tests ran</text>
+    <text x="24" y="234" fill="#e7e5e4">ea30bdcfcff91b034c09dde045eed59ea966b810900a27e3a3f2f359494dafb8 | 12 passed</text>
+    <text x="24" y="254" fill="#93c5fd">end-output</text>
+
+    <text x="24" y="286" fill="#f59e0b">$</text>
+    <text x="40" y="286" fill="#f5f2eb">finaltree verify stamped.log tree</text>
+    <text x="24" y="308" fill="#22c55e" font-weight="700">match</text>
+
+    <text x="24" y="338" fill="#f59e0b">$</text>
+    <text x="40" y="338" fill="#f5f2eb">printf 'beta changed\n' &gt; tree/b.txt &amp;&amp; finaltree verify stamped.log tree</text>
+    <text x="24" y="360" fill="#ef4444" font-weight="700">mismatch</text>
+    <text x="24" y="380" fill="#fca5a5">file content changed b.txt</text>
+    <text x="24" y="400" fill="#fca5a5">dirty file added b.txt (modified)</text>
+  </g>
+</svg>
