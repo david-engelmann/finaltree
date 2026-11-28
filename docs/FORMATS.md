@@ -35,12 +35,12 @@ Printed by `finaltree fingerprint` and embedded on the `fingerprint-json` header
 
 ### Bound Members
 
-- `commit` records `HEAD` (`null` on an unborn branch).
+- `commit` records the 40-hex `HEAD` commit of `ROOT` (root repositories on an unborn branch with no `HEAD` commit are refused).
 - `tracked` binds both the working-tree Git blob hash (`blob`, or `null` when deleted in working tree) and staged index stage blobs (`index_blobs`) for every tracked path.
 - `untracked` binds Git blob hashes of untracked files not claimed by `--generated`.
 - `dirty` classifies working-tree deviations as `staged`, `modified`, `untracked`, or `conflicted`.
 - `generated` and `generated_patterns` bind pre-existing files matching `--generated PATTERN` globs separately from ordinary untracked files.
-- Optional extended members appear whenever their corresponding entries stand in `ROOT`, including `submodules` (index gitlink, checked-out `HEAD`, and recursive `finaltree` digest), `modes` (executable `100755` and symbolic-link `120000` modes on untracked and generated files), `ignored` (ignored files present in `ROOT`), `embedded` (nested non-submodule Git repositories), `empty_dirs`, `special`, `dir_modes`, `file_modes`, and `dot_git`.
+- Optional extended members appear whenever their corresponding entries stand in `ROOT`, including `submodules` (index gitlink, checked-out `HEAD` or `null` when unchecked out, and recursive `finaltree` digest), `modes` (executable `100755` and symbolic-link `120000` modes on untracked, generated, and ignored files), `ignored` (ignored files present in `ROOT`), `embedded` (nested non-submodule Git repositories), `empty_dirs`, `special`, `dir_modes`, `file_modes`, and `dot_git`.
 - `digest` holds the 64-hex SHA-256 digest over the canonical serialization of all fingerprint members.
 
 ## 2. `finaltree-stamped-log/1`

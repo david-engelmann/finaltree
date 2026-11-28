@@ -15,7 +15,7 @@ Finaltree asks what exact working tree a gate ran on and binds that cryptographi
 
 Unlike `git rev-parse HEAD`, which sees only committed history, Finaltree captures every surface inside `ROOT` that can influence gate execution
 
-- **`HEAD` commit** Resolved locally (`null` on an unborn branch).
+- **`HEAD` commit** Resolved locally as a 40-hex commit hash (root repositories on an unborn branch with no `HEAD` commit are refused).
 - **Tracked working-tree and index blobs** Both the working-tree content hash (`blob`) and every index stage hash (`index_blobs`), catching partially staged edits and merge conflicts.
 - **Untracked files, ignored files, and `--generated` artifacts** Untracked files are partitioned by token-level glob patterns (`src/glob.rs`) into declared `generated` artifacts versus ordinary `untracked` files, and `.gitignore`-ignored files inside `ROOT` are bound under `ignored`.
 - **File modes and special entries** Executable (`100755`) and symbolic-link (`120000`) modes on untracked, generated, and ignored files are bound in `modes`, and unreadable or special filesystem entries are classified deterministically.
