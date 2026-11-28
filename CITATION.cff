@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use finaltree in research or engineering benchmarks, please cite this repository."
+title: "finaltree"
+abstract: "Provenance for gate results, fingerprinting the exact working tree under test and binding it to stamped gate logs"
+authors:
+  - family-names: "Engelmann"
+    given-names: "David"
+version: "0.21.0"
+date-released: "2026-11-27"
+license: "MIT"
+repository-code: "https://github.com/david-engelmann/finaltree"
+url: "https://david-engelmann.github.io/finaltree/"

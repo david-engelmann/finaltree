@@ -1,0 +1,5 @@
+target/
+.git/
+book/build/
+tests/
+docs/media/
