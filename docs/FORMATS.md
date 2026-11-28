@@ -63,7 +63,7 @@ end-output
 ### Integrity Rules
 
 - Every captured output line between `begin-output` and `end-output` is prefixed with `<64-hex-fingerprint> | `, so excerpted lines still carry the exact tree digest they came from.
-- `evidence-digest` is the SHA-256 digest binding the fingerprint, `command-json`, `exit-code`, and raw output bytes. Any edit to a line, header, or exit code causes `finaltree verify` to refuse the log with exit code `2`.
+- `evidence-digest` is an unkeyed SHA-256 integrity digest over `command-json`, `exit-code`, and the fingerprint-prefixed output lines. An accidental edit or truncation that does not recompute this digest causes `finaltree verify` to refuse the log with exit code `2`. Because anyone with write access to the log file can recompute the digest, `evidence-digest` checks accidental integrity rather than authenticating the log against deliberate forgery (pair with a signature or write-once CI artifact storage when log authenticity is required).
 
 ## 3. `verify` Output Grammar
 

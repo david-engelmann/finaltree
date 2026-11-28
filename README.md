@@ -49,7 +49,7 @@ Gate results get quoted from logs inherited from a superseded tree, and counts g
 
 ## Install
 
-Install from source with Cargo (Rust `1.80` or newer with `git` on `PATH` on Linux and macOS) or install verified prebuilt archives via `install.sh` or `cargo-binstall` once release archives are attached (`v0.21.0` and `v0.22.0` onward).
+Install from source with Cargo (Rust `1.80` or newer with `git` on `PATH` on Linux and macOS), install checksum-verified prebuilt archives via `install.sh`, or download prebuilt archives via `cargo-binstall` once release archives are attached (`v0.21.0` and `v0.22.0` onward).
 
 ```sh
 cargo install --git https://github.com/david-engelmann/finaltree --locked
@@ -67,8 +67,7 @@ Stamp a gate command against a working tree (placing `--log` and any scratch bui
 
 ```sh
 CARGO_TARGET_DIR=/tmp/gate-target finaltree stamp . --log /tmp/gate.stamped.log -- cargo test --locked
-finaltree verify /tmp/gate.stamped.log .
-grep -qx 'exit-code 0' /tmp/gate.stamped.log
+finaltree verify /tmp/gate.stamped.log . && grep -qx 'exit-code 0' /tmp/gate.stamped.log
 ```
 
 ```text

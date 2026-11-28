@@ -6,11 +6,11 @@ When `finaltree stamp ROOT --log PATH` executes, it fingerprints `ROOT` before r
 
 ## Does `finaltree verify` fail when the stamped gate command exited non-zero?
 
-`finaltree verify` verifies **provenance and integrity**, checking that the log is untampered and that `ROOT` matches the exact tree the command ran on. Even a failing test run (`exit-code 1`) has valid provenance when investigating a failure. When gating a merge, check both `finaltree verify stamped.log .` and `grep -qx 'exit-code 0' stamped.log`.
+`finaltree verify` verifies **provenance and unkeyed integrity**, checking that the log was not accidentally truncated or edited and that `ROOT` matches the exact tree the command ran on. Even a failing test run (`exit-code 1`) has valid provenance when investigating a failure. When gating a merge, join both checks as `finaltree verify stamped.log . && grep -qx 'exit-code 0' stamped.log`.
 
 ## Why did `verify` report a mismatch after `cargo test` or `pytest` wrote to a build folder?
 
-If a gate command creates or modifies files inside `ROOT` during its run (including build artifacts or caches when their directory state changes on disk), the post-run working tree differs from the pre-run tree that `stamp` fingerprinted. Direct build outputs outside `ROOT` (for example `CARGO_TARGET_DIR=/tmp/gate-target`) so `ROOT` stays immutable across the gate run.
+If a gate command creates or modifies tracked, untracked, `--generated`, or gitignored files inside `ROOT` during its run (Finaltree binds `.gitignore`-ignored files under the `ignored` fingerprint member alongside tracked and untracked files), the post-run working tree differs from the pre-run tree that `stamp` fingerprinted. Direct build outputs outside `ROOT` (for example `CARGO_TARGET_DIR=/tmp/gate-target`) so `ROOT` stays immutable across the gate run.
 
 ## Do I need to pass `--generated` on both `stamp` and `verify`?
 
@@ -18,4 +18,4 @@ When `stamp` runs with `--generated 'build/*'`, the declared patterns are record
 
 ## Does Finaltree modify my Git index or working tree?
 
-No. Finaltree queries `git` read-only (`rev-parse`, `ls-files`, `hash-object` without `-w` where applicable or read-only plumbing) and never stages, commits, resets, or deletes files in `ROOT`.
+Finaltree's Git inspection operations never stage, commit, reset, or delete files in `ROOT`. On `stamp`, Finaltree writes the stamped log to `--log PATH` (which should live outside `ROOT`) and runs the caller-supplied gate command with `ROOT` as its working directory.

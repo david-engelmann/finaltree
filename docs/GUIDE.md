@@ -14,7 +14,7 @@ cargo install --git https://github.com/david-engelmann/finaltree --locked
 
 ### Prebuilt Release Archives
 
-On Linux and macOS (`x86_64` and `aarch64`), install verified prebuilt archives via `install.sh` or `cargo-binstall` once release assets are attached (`v0.21.0` and `v0.22.0` onward).
+On Linux and macOS (`x86_64` and `aarch64`), install checksum-verified prebuilt archives via `install.sh` or download prebuilt archives via `cargo-binstall` once release assets are attached (`v0.21.0` and `v0.22.0` onward).
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/david-engelmann/finaltree/main/install.sh | sh
@@ -55,11 +55,10 @@ A stamped log belongs outside the tree it stamps, because writing `--log` inside
 
 ### 3. Check Both `finaltree verify` and `exit-code 0` Before Merging
 
-`finaltree verify` proves *tree provenance* and *log integrity* (even a failing gate run produces a valid stamped log recording its non-zero `exit-code`). In merge gates, verify both tree provenance and a zero gate exit code.
+`finaltree verify` proves *tree provenance* and *unkeyed log integrity* (even a failing gate run produces a valid stamped log recording its non-zero `exit-code`). In merge gates, chain tree verification and the zero gate exit-code check with `&&`.
 
 ```sh
-finaltree verify /tmp/gate.stamped.log .
-grep -qx 'exit-code 0' /tmp/gate.stamped.log
+finaltree verify /tmp/gate.stamped.log . && grep -qx 'exit-code 0' /tmp/gate.stamped.log
 ```
 
 ### 4. Sanitize `GIT_DIR` Inside Git Hooks
@@ -117,9 +116,7 @@ jobs:
       - name: Stamp test suite execution
         run: finaltree stamp . --log /tmp/gate.stamped.log -- cargo test --locked
       - name: Verify merge-candidate provenance and zero exit code
-        run: |
-          finaltree verify /tmp/gate.stamped.log .
-          grep -qx 'exit-code 0' /tmp/gate.stamped.log
+        run: finaltree verify /tmp/gate.stamped.log . && grep -qx 'exit-code 0' /tmp/gate.stamped.log
       - uses: actions/upload-artifact@v4
         with:
           name: stamped-gate-log
